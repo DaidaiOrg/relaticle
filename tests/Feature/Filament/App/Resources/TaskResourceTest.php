@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\Task\NotifyTaskAssignees;
+use App\Filament\Actions\ReplicateRecordAction;
 use App\Filament\Resources\TaskResource;
 use App\Filament\Resources\TaskResource\Pages\ManageTasks;
 use App\Mail\TaskAssignedMail;
@@ -28,7 +29,7 @@ use Illuminate\Support\Facades\Mail;
 
 use function Filament\Support\generate_icon_html;
 
-mutates(ManageTasks::class, NotifyTaskAssignees::class, TaskResource::class);
+mutates(ManageTasks::class, NotifyTaskAssignees::class, TaskResource::class, ReplicateRecordAction::class);
 
 beforeEach(function () {
     $this->user = User::factory()->withWorkspace()->create();

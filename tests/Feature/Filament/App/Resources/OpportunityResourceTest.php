@@ -8,6 +8,7 @@ use App\Filament\Resources\OpportunityResource;
 use App\Filament\Resources\OpportunityResource\Pages\ListOpportunities;
 use App\Filament\Resources\OpportunityResource\Pages\ViewOpportunity;
 use App\Filament\Resources\OpportunityResource\RelationManagers\MeetingsRelationManager;
+use App\Models\CustomFieldValue;
 use App\Models\Opportunity;
 use App\Models\User;
 use App\Models\Workspace;
@@ -280,13 +281,18 @@ it('replicates an unchanged opportunity with its custom fields once confirmed', 
         ->callMountedAction()
         ->callMountedAction()
         ->assertHasNoActionErrors()
-        ->assertNoActionMounted();
+        ->assertActionNotMounted();
 
     $copy = Opportunity::query()->where('name', 'Renewal')->whereKeyNot($record->getKey())->sole();
 
-    expect($copy->customFieldValues()->count())->toBe($record->customFieldValues()->count())
-        ->and($copy->customFieldValues->map->getValue()->map(fn (mixed $value): mixed => (string) $value)->sort()->values()->all())
-        ->toBe($record->customFieldValues->map->getValue()->map(fn (mixed $value): mixed => (string) $value)->sort()->values()->all());
+    $valuesByCode = fn (Opportunity $opportunity): array => $opportunity->customFieldValues()
+        ->with('customField')
+        ->get()
+        ->mapWithKeys(fn (CustomFieldValue $value): array => [$value->customField->code => (string) $value->getValue()])
+        ->sortKeys()
+        ->all();
+
+    expect($valuesByCode($copy))->toHaveCount(3)->toBe($valuesByCode($record));
 });
 
 it('replicates a changed opportunity without asking for confirmation', function (): void {
@@ -295,7 +301,7 @@ it('replicates a changed opportunity without asking for confirmation', function 
     livewire(ListOpportunities::class)
         ->callAction(TestAction::make('replicate')->table($record), data: ['name' => 'Renewal 2027'])
         ->assertHasNoActionErrors()
-        ->assertNoActionMounted();
+        ->assertActionNotMounted();
 
     $copy = Opportunity::query()->where('name', 'Renewal 2027')->sole();
 

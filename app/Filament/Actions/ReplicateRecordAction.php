@@ -10,6 +10,7 @@ use Filament\Actions\ReplicateAction;
 use Filament\Resources\Pages\Page;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
 use Relaticle\CustomFields\Models\Contracts\HasCustomFields;
 
 final class ReplicateRecordAction extends ReplicateAction
@@ -39,6 +40,10 @@ final class ReplicateRecordAction extends ReplicateAction
                 $livewire->mountAction('confirmUnchanged');
                 $this->halt();
             })
+            ->beforeReplicaSaved(fn (Model $replica) => $replica->setRawAttributes([
+                ...$replica->getAttributes(),
+                ...Arr::only($replica->newInstance()->getAttributes(), $this->getExcludedAttributes() ?? []),
+            ]))
             ->after(fn (Model $replica, Page $livewire) => $livewire
                 ->getSchema($livewire->getMountedActionSchemaName())
                 ?->model($replica)
