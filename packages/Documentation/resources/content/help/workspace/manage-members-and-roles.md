@@ -30,6 +30,7 @@ API or MCP.
 | Update records | Yes | Yes | Yes | No |
 | Delete and restore records | Yes | Yes | Yes | No |
 | Delete records permanently | Yes | Yes | No | No |
+| Duplicate records | Yes | Yes | Yes | No |
 | Import data | Yes | Yes | Yes | No |
 | Export data | Yes | Yes | Yes | No |
 | Invite, remove, and change member roles | Yes | Yes | No | No |

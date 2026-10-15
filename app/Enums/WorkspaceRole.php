@@ -58,6 +58,7 @@ enum WorkspaceRole: string
             self::Member => [
                 WorkspaceCapability::RecordsView,
                 WorkspaceCapability::RecordsCreate,
+                WorkspaceCapability::RecordsReplicate,
                 WorkspaceCapability::RecordsUpdate,
                 WorkspaceCapability::RecordsDelete,
                 WorkspaceCapability::DataImport,
