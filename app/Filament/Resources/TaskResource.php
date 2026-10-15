@@ -16,8 +16,10 @@ use App\Filament\Resources\TaskResource\Forms\TaskForm;
 use App\Filament\Resources\TaskResource\Pages\ManageTasks;
 use App\Filament\Resources\TaskResource\Pages\TasksBoard;
 use App\Models\CustomField;
+use App\Models\CustomFieldValue;
 use App\Models\Task;
 use App\Models\User;
+use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -25,6 +27,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\ReplicateAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Resources\Resource;
@@ -115,6 +118,7 @@ final class TaskResource extends Resource
             ]))
             ->recordActions([
                 ActionGroup::make([
+                    self::replicateAction(),
                     EditAction::make()
                         ->using(function (Task $record, array $data): Task {
                             /** @var User $user */
@@ -133,6 +137,52 @@ final class TaskResource extends Resource
                     ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),
                 ]),
+            ]);
+    }
+
+    private static function replicateAction(): ReplicateAction
+    {
+        return ReplicateAction::make()
+            ->excludeAttributes(['creator_id', 'creation_source', 'deleted_at'])
+            ->schema(fn (Schema $schema): Schema => self::form($schema))
+            ->mountUsing(function (ReplicateAction $action, Schema $schema, Task $record, ManageTasks $livewire): void {
+                $schema->fill([
+                    ...$record->attributesToArray(),
+                    'custom_fields' => $record->customFieldValues
+                        ->loadMissing('customField')
+                        ->keyBy('customField.code')
+                        ->map(fn (CustomFieldValue $value): mixed => $record->getCustomFieldValue($value->customField))
+                        ->all(),
+                ]);
+                $schema->model($record)->loadStateFromRelationships(shouldHydrate: true);
+                $schema->model(Task::class);
+
+                $livewire->mergeMountedActionArguments(['original' => $action->getRawData()]);
+            })
+            ->before(function (ReplicateAction $action, array $arguments, ManageTasks $livewire): void {
+                if (($arguments['confirmed'] ?? false) || $action->getRawData() !== $arguments['original']) {
+                    return;
+                }
+
+                $livewire->mountAction('confirmUnchanged');
+                $action->halt();
+            })
+            ->after(fn (Task $replica, ManageTasks $livewire) => $livewire
+                ->getSchema($livewire->getMountedActionSchemaName())
+                ->model($replica)
+                ->saveRelationships())
+            ->registerModalActions([
+                Action::make('confirmUnchanged')
+                    ->requiresConfirmation()
+                    ->overlayParentActions()
+                    ->modalHeading(__('filament/actions/replicate.unchanged.heading'))
+                    ->modalDescription(__('filament/actions/replicate.unchanged.description', ['label' => self::getModelLabel()]))
+                    ->modalSubmitActionLabel(__('filament/actions/replicate.unchanged.submit'))
+                    ->modalCancelActionLabel(__('filament/actions/replicate.unchanged.cancel'))
+                    ->action(function (ManageTasks $livewire): void {
+                        $livewire->unmountAction(cancelParentActions: false);
+                        $livewire->callMountedAction(['confirmed' => true]);
+                    }),
             ]);
     }
 

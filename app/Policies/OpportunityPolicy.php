@@ -69,4 +69,9 @@ final readonly class OpportunityPolicy
     {
         return $user->hasWorkspaceCapability($user->currentWorkspace?->getKey(), WorkspaceCapability::DataExport);
     }
+
+    public function replicate(User $user, Opportunity $opportunity): bool
+    {
+        return $user->hasWorkspaceCapability($opportunity->workspace_id, WorkspaceCapability::RecordsReplicate);
+    }
 }

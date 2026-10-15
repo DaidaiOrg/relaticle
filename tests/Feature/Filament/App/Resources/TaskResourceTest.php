@@ -430,3 +430,31 @@ it('gives the task description the borderless document canvas', function (): voi
     expect($editor->getExtraAttributes())->toHaveKey('data-slash-menu')
         ->and($editor->getExtraAttributes()['class'])->toContain('fi-fo-rich-editor-seamless');
 });
+
+it('replicates a task with its assignees and linked records', function (): void {
+    $assignee = User::factory()->create();
+    $this->workspace->users()->attach($assignee, ['role' => 'member']);
+    $company = Company::factory()->recycle([$this->user, $this->workspace])->create();
+    $person = People::factory()->recycle([$this->user, $this->workspace])->create();
+
+    $record = Task::factory()->recycle([$this->user, $this->workspace])->create(['title' => 'Follow up']);
+    $record->assignees()->attach($assignee);
+    $record->companies()->attach($company);
+    $record->people()->attach($person);
+
+    livewire(ManageTasks::class)
+        ->mountAction(TestAction::make('replicate')->table($record))
+        ->assertActionDataSet([
+            'assignees' => [$assignee->id],
+            'relations' => ["company:{$company->id}", "people:{$person->id}"],
+        ])
+        ->setActionData(['title' => 'Follow up again'])
+        ->callMountedAction()
+        ->assertHasNoActionErrors();
+
+    $copy = Task::query()->where('title', 'Follow up again')->sole();
+
+    expect($copy->assignees->modelKeys())->toBe([$assignee->id])
+        ->and($copy->companies->modelKeys())->toBe([$company->id])
+        ->and($copy->people->modelKeys())->toBe([$person->id]);
+});

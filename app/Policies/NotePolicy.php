@@ -69,4 +69,9 @@ final readonly class NotePolicy
     {
         return $user->hasWorkspaceCapability($user->currentWorkspace?->getKey(), WorkspaceCapability::DataExport);
     }
+
+    public function replicate(User $user, Note $note): bool
+    {
+        return $user->hasWorkspaceCapability($note->workspace_id, WorkspaceCapability::RecordsReplicate);
+    }
 }

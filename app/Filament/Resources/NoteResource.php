@@ -6,6 +6,7 @@ namespace App\Filament\Resources;
 
 use App\Enums\CreationSource;
 use App\Enums\CrmEntity;
+use App\Filament\Actions\ReplicateRecordAction;
 use App\Filament\Components\Tables\LinkedRecordsColumn;
 use App\Filament\Concerns\RemembersViewMode;
 use App\Filament\Exports\NoteExporter;
@@ -111,6 +112,7 @@ final class NoteResource extends Resource
             ])
             ->recordActions([
                 ActionGroup::make([
+                    ReplicateRecordAction::make(),
                     EditAction::make(),
                     DeleteAction::make(),
                     ForceDeleteAction::make(),

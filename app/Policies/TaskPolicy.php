@@ -69,4 +69,9 @@ final readonly class TaskPolicy
     {
         return $user->hasWorkspaceCapability($user->currentWorkspace?->getKey(), WorkspaceCapability::DataExport);
     }
+
+    public function replicate(User $user, Task $task): bool
+    {
+        return $user->hasWorkspaceCapability($task->workspace_id, WorkspaceCapability::RecordsReplicate);
+    }
 }

@@ -468,3 +468,29 @@ it('points the navigation link at the view the user opened last', function (): v
 
     expect(NoteResource::getNavigationUrl())->toBe(NoteResource::getUrl('index'));
 });
+
+it('replicates a note with its linked records from `:dataset`', function (string $page): void {
+    $company = Company::factory()->recycle([$this->user, $this->workspace])->create();
+    $person = People::factory()->recycle([$this->user, $this->workspace])->create();
+
+    $record = Note::factory()->recycle([$this->user, $this->workspace])->create(['title' => 'Kickoff notes']);
+    $record->companies()->attach($company);
+    $record->people()->attach($person);
+
+    livewire($page)
+        ->mountAction(TestAction::make('replicate')->table($record))
+        ->assertActionDataSet([
+            'relations' => ["company:{$company->id}", "people:{$person->id}"],
+        ])
+        ->setActionData(['title' => 'Kickoff notes v2'])
+        ->callMountedAction()
+        ->assertHasNoActionErrors();
+
+    $copy = Note::query()->where('title', 'Kickoff notes v2')->sole();
+
+    expect($copy->companies->modelKeys())->toBe([$company->id])
+        ->and($copy->people->modelKeys())->toBe([$person->id]);
+})->with([
+    'cards' => NotesCards::class,
+    'list' => ManageNotes::class,
+]);
