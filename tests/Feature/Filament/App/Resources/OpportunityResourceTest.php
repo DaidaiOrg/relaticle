@@ -262,11 +262,24 @@ function opportunityWithCustomFields(Workspace $workspace, User $user): Opportun
     return $opportunity->refresh();
 }
 
-it('duplicates an opportunity with its custom fields', function (): void {
+it('asks before duplicating an opportunity without changes', function (): void {
     $record = opportunityWithCustomFields($this->workspace, $this->user);
 
     livewire(ListOpportunities::class)
-        ->callAction(TestAction::make('duplicate')->table($record))
+        ->mountAction(TestAction::make('duplicate')->table($record))
+        ->callMountedAction()
+        ->assertActionMounted([TestAction::make('duplicate')->table($record), TestAction::make('confirmUnchanged')]);
+
+    expect(Opportunity::query()->where('name', 'Renewal')->count())->toBe(1);
+});
+
+it('duplicates an unchanged opportunity with its custom fields once confirmed', function (): void {
+    $record = opportunityWithCustomFields($this->workspace, $this->user);
+
+    livewire(ListOpportunities::class)
+        ->mountAction(TestAction::make('duplicate')->table($record))
+        ->callMountedAction()
+        ->callMountedAction()
         ->assertHasNoActionErrors()
         ->assertActionNotMounted();
 

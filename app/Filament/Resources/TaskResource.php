@@ -139,7 +139,7 @@ final class TaskResource extends Resource
             ]);
     }
 
-    private static function duplicateAction(): DuplicateAction
+    public static function duplicateAction(): DuplicateAction
     {
         return DuplicateAction::make()
             ->after(function (DuplicateAction $action, Task $record): void {
