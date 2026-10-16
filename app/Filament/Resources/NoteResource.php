@@ -112,7 +112,7 @@ final class NoteResource extends Resource
             ])
             ->recordActions([
                 ActionGroup::make([
-                    DuplicateAction::make('duplicate'),
+                    DuplicateAction::make(),
                     EditAction::make(),
                     DeleteAction::make(),
                     ForceDeleteAction::make(),

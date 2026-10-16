@@ -94,7 +94,7 @@ final class OpportunityResource extends Resource
             ])
             ->recordActions([
                 ActionGroup::make([
-                    DuplicateAction::make('duplicate'),
+                    DuplicateAction::make(),
                     ViewAction::make(),
                     EditAction::make(),
                     RestoreAction::make(),

@@ -16,6 +16,11 @@ use Relaticle\CustomFields\Models\Contracts\HasCustomFields;
 
 final class DuplicateAction extends CreateAction
 {
+    public static function getDefaultName(): string
+    {
+        return 'duplicate';
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
