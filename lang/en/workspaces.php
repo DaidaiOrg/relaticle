@@ -272,7 +272,6 @@ return [
             'update' => ['label' => 'Update records'],
             'delete' => ['label' => 'Delete and restore records'],
             'force_delete' => ['label' => 'Delete records permanently'],
-            'replicate' => ['label' => 'Duplicate records'],
         ],
         'data' => [
             'import' => ['label' => 'Import data'],

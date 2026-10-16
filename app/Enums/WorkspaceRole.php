@@ -42,7 +42,6 @@ enum WorkspaceRole: string
         return match ($this) {
             self::Admin => [
                 WorkspaceCapability::RecordsView,
-                WorkspaceCapability::RecordsReplicate,
                 WorkspaceCapability::RecordsCreate,
                 WorkspaceCapability::RecordsUpdate,
                 WorkspaceCapability::RecordsDelete,
@@ -58,7 +57,6 @@ enum WorkspaceRole: string
             self::Member => [
                 WorkspaceCapability::RecordsView,
                 WorkspaceCapability::RecordsCreate,
-                WorkspaceCapability::RecordsReplicate,
                 WorkspaceCapability::RecordsUpdate,
                 WorkspaceCapability::RecordsDelete,
                 WorkspaceCapability::DataImport,

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Filament\Actions\DuplicateAction;
 use App\Filament\Components\Forms\LinkedRecordsSelect;
 use App\Filament\Resources\NoteResource;
 use App\Filament\Resources\NoteResource\Pages\ManageNotes;
@@ -20,7 +21,7 @@ use Filament\Schemas\Components\Component;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Database\Eloquent\Model;
 
-mutates(NoteResource::class, NotesCards::class, LinkedRecordsSelect::class);
+mutates(NoteResource::class, NotesCards::class, LinkedRecordsSelect::class, DuplicateAction::class);
 
 beforeEach(function () {
     $this->user = User::factory()->withWorkspace()->create();
@@ -469,7 +470,7 @@ it('points the navigation link at the view the user opened last', function (): v
     expect(NoteResource::getNavigationUrl())->toBe(NoteResource::getUrl('index'));
 });
 
-it('replicates a note with its linked records from `:dataset`', function (string $page): void {
+it('duplicates a note with its linked records from `:dataset`', function (string $page): void {
     $company = Company::factory()->recycle([$this->user, $this->workspace])->create();
     $person = People::factory()->recycle([$this->user, $this->workspace])->create();
 
@@ -478,7 +479,7 @@ it('replicates a note with its linked records from `:dataset`', function (string
     $record->people()->attach($person);
 
     livewire($page)
-        ->mountAction(TestAction::make('replicate')->table($record))
+        ->mountAction(TestAction::make('duplicate')->table($record))
         ->assertActionDataSet([
             'relations' => ["company:{$company->id}", "people:{$person->id}"],
         ])

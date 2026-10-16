@@ -6,7 +6,7 @@ namespace App\Filament\Resources;
 
 use App\Enums\CreationSource;
 use App\Enums\CrmEntity;
-use App\Filament\Actions\ReplicateRecordAction;
+use App\Filament\Actions\DuplicateAction;
 use App\Filament\Concerns\RemembersViewMode;
 use App\Filament\Exports\OpportunityExporter;
 use App\Filament\Resources\OpportunityResource\Forms\OpportunityForm;
@@ -94,7 +94,7 @@ final class OpportunityResource extends Resource
             ])
             ->recordActions([
                 ActionGroup::make([
-                    ReplicateRecordAction::make(),
+                    DuplicateAction::make(),
                     ViewAction::make(),
                     EditAction::make(),
                     RestoreAction::make(),

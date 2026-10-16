@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\CreationSource;
-use App\Filament\Actions\ReplicateRecordAction;
+use App\Filament\Actions\DuplicateAction;
 use App\Filament\Resources\OpportunityResource;
 use App\Filament\Resources\OpportunityResource\Pages\ListOpportunities;
 use App\Filament\Resources\OpportunityResource\Pages\ViewOpportunity;
@@ -17,7 +17,7 @@ use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
-mutates(OpportunityResource::class, ReplicateRecordAction::class);
+mutates(OpportunityResource::class, DuplicateAction::class);
 
 beforeEach(function () {
     $this->user = User::factory()->withWorkspace()->create();
@@ -262,24 +262,11 @@ function opportunityWithCustomFields(Workspace $workspace, User $user): Opportun
     return $opportunity->refresh();
 }
 
-it('asks for confirmation before replicating an opportunity without changes', function (): void {
+it('duplicates an opportunity with its custom fields', function (): void {
     $record = opportunityWithCustomFields($this->workspace, $this->user);
 
     livewire(ListOpportunities::class)
-        ->mountAction(TestAction::make('replicate')->table($record))
-        ->callMountedAction()
-        ->assertActionMounted([TestAction::make('replicate')->table($record), TestAction::make('confirmUnchanged')]);
-
-    expect(Opportunity::query()->where('name', 'Renewal')->count())->toBe(1);
-});
-
-it('replicates an unchanged opportunity with its custom fields once confirmed', function (): void {
-    $record = opportunityWithCustomFields($this->workspace, $this->user);
-
-    livewire(ListOpportunities::class)
-        ->mountAction(TestAction::make('replicate')->table($record))
-        ->callMountedAction()
-        ->callMountedAction()
+        ->callAction(TestAction::make('duplicate')->table($record))
         ->assertHasNoActionErrors()
         ->assertActionNotMounted();
 
@@ -295,11 +282,11 @@ it('replicates an unchanged opportunity with its custom fields once confirmed', 
     expect($valuesByCode($copy))->toHaveCount(3)->toBe($valuesByCode($record));
 });
 
-it('replicates a changed opportunity without asking for confirmation', function (): void {
+it('duplicates an opportunity under an edited name', function (): void {
     $record = opportunityWithCustomFields($this->workspace, $this->user);
 
     livewire(ListOpportunities::class)
-        ->callAction(TestAction::make('replicate')->table($record), data: ['name' => 'Renewal 2027'])
+        ->callAction(TestAction::make('duplicate')->table($record), data: ['name' => 'Renewal 2027'])
         ->assertHasNoActionErrors()
         ->assertActionNotMounted();
 
@@ -308,7 +295,7 @@ it('replicates a changed opportunity without asking for confirmation', function 
     expect($copy->customFieldValues()->count())->toBe(3);
 });
 
-it('records the replicating member as the creator of the copy', function (): void {
+it('records the duplicating member as the creator of the copy', function (): void {
     $originalCreator = User::factory()->create();
     $this->workspace->users()->attach($originalCreator, ['role' => 'member']);
     $record = Opportunity::factory()->recycle($this->workspace)->create([
@@ -318,7 +305,7 @@ it('records the replicating member as the creator of the copy', function (): voi
     ]);
 
     livewire(ListOpportunities::class)
-        ->callAction(TestAction::make('replicate')->table($record), data: ['name' => 'Renewal 2027'])
+        ->callAction(TestAction::make('duplicate')->table($record), data: ['name' => 'Renewal 2027'])
         ->assertHasNoActionErrors();
 
     $copy = Opportunity::query()->where('name', 'Renewal 2027')->sole();

@@ -11,7 +11,6 @@ enum WorkspaceCapability: string
     case RecordsUpdate = 'records.update';
     case RecordsDelete = 'records.delete';
     case RecordsForceDelete = 'records.force_delete';
-    case RecordsReplicate = 'records.replicate';
     case DataImport = 'data.import';
     case DataExport = 'data.export';
     case MembersManage = 'members.manage';

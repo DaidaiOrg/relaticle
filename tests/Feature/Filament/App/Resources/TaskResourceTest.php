@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\Task\NotifyTaskAssignees;
-use App\Filament\Actions\ReplicateRecordAction;
+use App\Filament\Actions\DuplicateAction;
 use App\Filament\Resources\TaskResource;
 use App\Filament\Resources\TaskResource\Pages\ManageTasks;
 use App\Mail\TaskAssignedMail;
@@ -29,7 +29,7 @@ use Illuminate\Support\Facades\Mail;
 
 use function Filament\Support\generate_icon_html;
 
-mutates(ManageTasks::class, NotifyTaskAssignees::class, TaskResource::class, ReplicateRecordAction::class);
+mutates(ManageTasks::class, NotifyTaskAssignees::class, TaskResource::class, DuplicateAction::class);
 
 beforeEach(function () {
     $this->user = User::factory()->withWorkspace()->create();
@@ -432,7 +432,7 @@ it('gives the task description the borderless document canvas', function (): voi
         ->and($editor->getExtraAttributes()['class'])->toContain('fi-fo-rich-editor-seamless');
 });
 
-it('replicates a task with its assignees and linked records', function (): void {
+it('duplicates a task with its assignees and linked records', function (): void {
     $assignee = User::factory()->create();
     $this->workspace->users()->attach($assignee, ['role' => 'member']);
     $company = Company::factory()->recycle([$this->user, $this->workspace])->create();
@@ -444,7 +444,7 @@ it('replicates a task with its assignees and linked records', function (): void 
     $record->people()->attach($person);
 
     livewire(ManageTasks::class)
-        ->mountAction(TestAction::make('replicate')->table($record))
+        ->mountAction(TestAction::make('duplicate')->table($record))
         ->assertActionDataSet([
             'assignees' => [$assignee->id],
             'relations' => ["company:{$company->id}", "people:{$person->id}"],
@@ -458,4 +458,82 @@ it('replicates a task with its assignees and linked records', function (): void 
     expect($copy->assignees->modelKeys())->toBe([$assignee->id])
         ->and($copy->companies->modelKeys())->toBe([$company->id])
         ->and($copy->people->modelKeys())->toBe([$person->id]);
+});
+
+it('notifies the assignees of a duplicated task like a new task', function (): void {
+    $this->withoutDefer();
+    $assignee = User::factory()->create();
+    $this->workspace->users()->attach($assignee, ['role' => 'member']);
+
+    $record = Task::factory()->recycle([$this->user, $this->workspace])->create(['title' => 'Follow up']);
+    $record->assignees()->attach($assignee);
+
+    livewire(ManageTasks::class)
+        ->callAction(TestAction::make('duplicate')->table($record), data: ['title' => 'Follow up again'])
+        ->assertHasNoActionErrors();
+
+    $copy = Task::query()->where('title', 'Follow up again')->sole();
+
+    expect(data_get($assignee->notifications()->sole()->data, 'title'))->toBe('New Task Assignment: Follow up again')
+        ->and(data_get($assignee->notifications()->sole()->data, 'actions.0.url'))->toContain('tableActionRecord='.$copy->getKey());
+});
+
+it('notifies the assignees chosen in the duplicate form, not the original ones', function (): void {
+    $this->withoutDefer();
+    [$originalAssignee, $newAssignee] = User::factory(2)->create();
+    $this->workspace->users()->attach([$originalAssignee->id, $newAssignee->id], ['role' => 'member']);
+
+    $record = Task::factory()->recycle([$this->user, $this->workspace])->create(['title' => 'Follow up']);
+    $record->assignees()->attach($originalAssignee);
+
+    livewire(ManageTasks::class)
+        ->callAction(TestAction::make('duplicate')->table($record), data: ['title' => 'Follow up again', 'assignees' => [$newAssignee->id]])
+        ->assertHasNoActionErrors();
+
+    expect(Task::query()->where('title', 'Follow up again')->sole()->assignees->modelKeys())->toBe([$newAssignee->id])
+        ->and($newAssignee->notifications()->count())->toBe(1)
+        ->and($originalAssignee->notifications()->count())->toBe(0);
+});
+
+it('notifies only the assignees submitted through the duplicate action', function (): void {
+    Mail::fake();
+
+    $intendedAssignee = User::factory()->create([
+        'notification_preferences' => ['task_assigned' => ['email' => true]],
+    ]);
+    $concurrentAssignee = User::factory()->create([
+        'notification_preferences' => ['task_assigned' => ['email' => true]],
+    ]);
+    $this->workspace->users()->attach([$intendedAssignee->id, $concurrentAssignee->id], ['role' => 'member']);
+
+    $record = Task::factory()->recycle([$this->user, $this->workspace])->create(['title' => 'Follow up']);
+    $record->assignees()->attach($intendedAssignee);
+
+    $concurrentAssignmentAdded = false;
+    DB::listen(function (QueryExecuted $query) use ($concurrentAssignee, &$concurrentAssignmentAdded): void {
+        if ($concurrentAssignmentAdded || ! str_contains($query->sql, 'insert into "task_user"')) {
+            return;
+        }
+
+        $taskId = DB::table('tasks')->where('title', 'Duplicate notification race')->value('id');
+
+        if (! is_string($taskId)) {
+            return;
+        }
+
+        $concurrentAssignmentAdded = true;
+        DB::table('task_user')->insert([
+            'task_id' => $taskId,
+            'user_id' => $concurrentAssignee->id,
+        ]);
+    });
+
+    livewire(ManageTasks::class)
+        ->callAction(TestAction::make('duplicate')->table($record), data: ['title' => 'Duplicate notification race'])
+        ->assertHasNoActionErrors();
+
+    defer()->invoke();
+
+    Mail::assertQueued(TaskAssignedMail::class, fn (TaskAssignedMail $mail): bool => $mail->hasTo($intendedAssignee->email));
+    Mail::assertNotQueued(TaskAssignedMail::class, fn (TaskAssignedMail $mail): bool => $mail->hasTo($concurrentAssignee->email));
 });
