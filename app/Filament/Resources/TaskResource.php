@@ -141,7 +141,7 @@ final class TaskResource extends Resource
 
     public static function duplicateAction(): DuplicateAction
     {
-        return DuplicateAction::make()
+        return DuplicateAction::make('duplicate')
             ->after(function (DuplicateAction $action, Task $record): void {
                 $submittedAssignees = $action->getRawData()['assignees'] ?? [];
                 $assigneeIds = array_values(array_filter(is_array($submittedAssignees) ? $submittedAssignees : [], is_string(...)));

@@ -42,7 +42,7 @@ final class NotesRelationManager extends RelationManager
             ])
             ->recordActions([
                 ActionGroup::make([
-                    DuplicateAction::make(),
+                    DuplicateAction::make('duplicate'),
                     EditAction::make(),
                     DeleteAction::make(),
                 ]),
