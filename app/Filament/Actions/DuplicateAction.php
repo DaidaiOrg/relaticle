@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Actions;
 
+use App\Actions\Upload\CopyRichContentAttachments;
 use App\Models\CustomFieldValue;
+use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\Page;
@@ -13,6 +15,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Model;
 use Relaticle\CustomFields\Models\Contracts\HasCustomFields;
+use Spatie\MediaLibrary\HasMedia;
 
 final class DuplicateAction extends CreateAction
 {
@@ -41,13 +44,13 @@ final class DuplicateAction extends CreateAction
 
                 $livewire->mergeMountedActionArguments(['original' => $this->getRawData()]);
             })
-            ->before(function (array $arguments, Page|RelationManager $livewire): void {
-                if (($arguments['confirmed'] ?? false) || $this->getRawData() !== $arguments['original']) {
-                    return;
+            ->before(function (array $arguments, Model $record, Page|RelationManager $livewire): void {
+                if (! ($arguments['confirmed'] ?? false) && $this->getRawData() === $arguments['original']) {
+                    $livewire->mountAction('confirmUnchanged');
+                    $this->halt();
                 }
 
-                $livewire->mountAction('confirmUnchanged');
-                $this->halt();
+                $this->copyAttachments($record);
             })
             ->registerModalActions([
                 Action::make('confirmUnchanged')
@@ -62,6 +65,23 @@ final class DuplicateAction extends CreateAction
                         $livewire->callMountedAction(['confirmed' => true]);
                     }),
             ]);
+    }
+
+    private function copyAttachments(Model $record): void
+    {
+        $data = $this->getData();
+
+        if (! $record instanceof HasCustomFields || ! $record instanceof HasMedia || ! is_array($data['custom_fields'] ?? null)) {
+            return;
+        }
+
+        /** @var User $user */
+        $user = auth()->user();
+
+        $this->data([
+            ...$data,
+            'custom_fields' => resolve(CopyRichContentAttachments::class)->execute($user, $record, $data['custom_fields']),
+        ], shouldMutate: false);
     }
 
     /**
