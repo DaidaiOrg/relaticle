@@ -24,13 +24,18 @@ use Filament\Actions\Action;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Filament\Notifications\NotificationMailbox;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Promise\PromiseInterface;
+use GuzzleHttp\Psr7\Request as Psr7Request;
 use Illuminate\Contracts\Broadcasting\Broadcaster as BroadcasterContract;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Http\Client\Request as HttpClientRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Passport\AccessToken;
@@ -189,6 +194,30 @@ function setHistoryImportBatchProgress(string $batchId, int $totalJobs, int $pen
         'pending_jobs' => $pendingJobs,
         'failed_jobs' => 0,
         'finished_at' => null,
+    ]);
+}
+
+function googleError(int $status, string $reason, string $message): PromiseInterface
+{
+    return Http::response([
+        'error' => [
+            'code' => $status,
+            'message' => $message,
+            'errors' => [['message' => $message, 'domain' => 'global', 'reason' => $reason]],
+        ],
+    ], $status);
+}
+
+function googleTimeout(): Closure
+{
+    return fn (HttpClientRequest $request): never => throw new ConnectException('cURL error 28: Operation timed out', new Psr7Request('GET', $request->url()));
+}
+
+function fakeGoogleProbe(PromiseInterface|Closure|null $mail = null, PromiseInterface|Closure|null $calendar = null): void
+{
+    Http::fake([
+        'gmail.googleapis.com/gmail/v1/users/me/profile*' => $mail ?? Http::response(['emailAddress' => 'connected@example.com']),
+        'www.googleapis.com/calendar/v3/users/me/calendarList*' => $calendar ?? Http::response(['items' => []]),
     ]);
 }
 

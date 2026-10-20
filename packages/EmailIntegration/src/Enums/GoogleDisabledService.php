@@ -12,6 +12,14 @@ enum GoogleDisabledService
     case Mail;
     case Calendar;
 
+    public function syncErrorReason(): ?SyncErrorReason
+    {
+        return match ($this) {
+            self::Mail => SyncErrorReason::GoogleMailDisabled,
+            self::Calendar => null,
+        };
+    }
+
     public static function fromException(Throwable $exception): ?self
     {
         if (! $exception instanceof GoogleServiceException) {

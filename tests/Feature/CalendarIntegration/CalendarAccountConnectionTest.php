@@ -33,6 +33,7 @@ it('flips calendar capability and dispatches InitialCalendarSyncJob on calendar 
         'https://www.googleapis.com/auth/calendar.readonly',
     ];
 
+    fakeGoogleProbe();
     Socialite::fake('gmail', $social);
     bindMailboxOAuthWorkspace($user);
 
@@ -63,6 +64,7 @@ it('enables calendar when Google grants calendar.events without calendar.readonl
         'https://www.googleapis.com/auth/calendar.events',
     ];
 
+    fakeGoogleProbe();
     Socialite::fake('gmail', $social);
     bindMailboxOAuthWorkspace($user);
 
@@ -93,6 +95,7 @@ it('connects mail without calendar when the user leaves both calendar scopes unc
         'https://www.googleapis.com/auth/gmail.send',
     ];
 
+    fakeGoogleProbe();
     Socialite::fake('gmail', $social);
     bindMailboxOAuthWorkspace($user);
 
@@ -123,6 +126,7 @@ it('records send as missing when Google does not grant gmail.send', function ():
         'https://www.googleapis.com/auth/calendar.readonly',
     ];
 
+    fakeGoogleProbe();
     Socialite::fake('gmail', $social);
     bindMailboxOAuthWorkspace($user);
 
@@ -153,6 +157,7 @@ it('turns send back on after reconnecting with gmail.send', function (): void {
         $social->expiresIn = 3600;
         $social->approvedScopes = $scopes;
 
+        fakeGoogleProbe();
         Socialite::fake('gmail', $social);
         bindMailboxOAuthWorkspace($user);
 

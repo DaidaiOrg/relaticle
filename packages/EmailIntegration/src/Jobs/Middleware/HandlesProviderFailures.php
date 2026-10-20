@@ -46,8 +46,10 @@ final class HandlesProviderFailures
                 return;
             }
 
-            if ($disabledService === GoogleDisabledService::Mail) {
-                $this->failMailDisabled($job, $exception);
+            $syncErrorReason = $disabledService?->syncErrorReason();
+
+            if ($syncErrorReason instanceof SyncErrorReason) {
+                $this->failWithReason($job, $exception, $syncErrorReason);
 
                 return;
             }
@@ -90,15 +92,16 @@ final class HandlesProviderFailures
         $job->delete();
     }
 
-    private function failMailDisabled(
+    private function failWithReason(
         IncrementalEmailSyncJob|InitialEmailSyncJob|IncrementalCalendarSyncJob|InitialCalendarSyncJob|EnsureCalendarPushChannelJob $job,
         Throwable $exception,
+        SyncErrorReason $reason,
     ): void {
         $job->fail($exception);
 
         $job->connectedAccount->fresh()?->update([
             'status' => EmailAccountStatus::ERROR,
-            'last_error' => SyncErrorReason::GoogleMailDisabled->value,
+            'last_error' => $reason->value,
         ]);
     }
 }

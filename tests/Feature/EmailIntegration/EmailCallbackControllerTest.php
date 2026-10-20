@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Models\User;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
-use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -14,7 +13,6 @@ use Laravel\Socialite\Two\InvalidStateException;
 use Laravel\Socialite\Two\User as SocialiteUser;
 use Relaticle\EmailIntegration\Controllers\CallbackController;
 use Relaticle\EmailIntegration\Controllers\RedirectController;
-use Relaticle\EmailIntegration\Enums\SyncErrorReason;
 use Relaticle\EmailIntegration\Filament\Pages\EmailAccountsPage;
 use Relaticle\EmailIntegration\Jobs\InitialCalendarSyncJob;
 use Relaticle\EmailIntegration\Models\ConnectedAccount;
@@ -94,6 +92,7 @@ it('tells an owner who cancels at the provider that nothing was connected', func
 
 it('returns to the page that started the connect with a success notification', function (): void {
     Bus::fake();
+    fakeGoogleProbe();
 
     Socialite::fake('gmail', connectedGmailUser());
     bindMailboxOAuthWorkspace($this->user);
@@ -148,6 +147,7 @@ it('returns to the page that started the connect when the mail read permission w
 
 it('lands on the account settings after a connect with no return page', function (): void {
     Bus::fake();
+    fakeGoogleProbe();
 
     Socialite::fake('gmail', connectedGmailUser());
     bindMailboxOAuthWorkspace($this->user);
@@ -197,7 +197,7 @@ it('refuses to connect a google account whose workspace has gmail switched off',
         ->assertRedirect(EmailAccountsPage::getUrl([
             'tenant' => $this->user->currentWorkspace->slug,
         ], panel: 'app'))
-        ->assertSessionHas('error', SyncErrorReason::GoogleMailDisabled->getLabel());
+        ->assertSessionHas('error', __('filament/pages/email-accounts.notifications.gmail_disabled.title'));
 
     $this->assertDatabaseMissing(ConnectedAccount::class, [
         'email_address' => 'connected@example.com',
@@ -225,21 +225,29 @@ it('connects without calendar when the user has no google calendar', function ()
     Bus::assertNotDispatched(InitialCalendarSyncJob::class);
 
     Notification::assertNotified(
-        Notification::make()->title(__('filament/pages/email-accounts.sync_error.reasons.google_calendar_disabled'))->warning(),
+        Notification::make()
+            ->title(__('filament/pages/email-accounts.notifications.connected_without_calendar.title'))
+            ->body(__('filament/pages/email-accounts.notifications.connected_without_calendar.body'))
+            ->success(),
     );
 });
 
-it('does not warn about calendar when the user never granted calendar access', function (): void {
+it('does not probe calendar when the user never granted calendar access', function (): void {
     Bus::fake();
-    fakeGoogleProbe(calendar: googleError(403, 'notACalendarUser', 'The user must be signed up for Google Calendar.'));
+    fakeGoogleProbe();
 
     Socialite::fake('gmail', connectedGmailUser());
     bindMailboxOAuthWorkspace($this->user);
 
     $this->get(route('email-accounts.callback', ['provider' => 'gmail']))->assertRedirect();
 
-    Notification::assertNotNotified(
-        Notification::make()->title(__('filament/pages/email-accounts.sync_error.reasons.google_calendar_disabled'))->warning(),
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), 'calendar/v3'));
+
+    Notification::assertNotified(
+        Notification::make()
+            ->title(__('filament/pages/email-accounts.notifications.connected.title'))
+            ->body(__('filament/pages/email-accounts.notifications.connected.body'))
+            ->success(),
     );
 });
 
@@ -264,16 +272,39 @@ it('connects with both when the probe fails transiently', function (): void {
 
     Bus::assertDispatched(InitialCalendarSyncJob::class);
 
-    Notification::assertNotNotified(
-        Notification::make()->title(__('filament/pages/email-accounts.sync_error.reasons.google_calendar_disabled'))->warning(),
+    Notification::assertNotified(
+        Notification::make()
+            ->title(__('filament/pages/email-accounts.notifications.connected.title'))
+            ->body(__('filament/pages/email-accounts.notifications.connected.body'))
+            ->success(),
     );
+});
+
+it('connects with both when the google probe times out', function (): void {
+    Bus::fake();
+    fakeGoogleProbe(mail: googleTimeout(), calendar: googleTimeout());
+
+    $social = connectedGmailUser();
+    $social->approvedScopes[] = 'https://www.googleapis.com/auth/calendar.readonly';
+
+    Socialite::fake('gmail', $social);
+    bindMailboxOAuthWorkspace($this->user);
+
+    $this->get(route('email-accounts.callback', ['provider' => 'gmail']))->assertRedirect();
+
+    $account = ConnectedAccount::query()->where('email_address', 'connected@example.com')->firstOrFail();
+
+    expect($account->hasCalendar())->toBeTrue();
 });
 
 it('probes gmail and calendar before connecting a google account', function (): void {
     Bus::fake();
     fakeGoogleProbe();
 
-    Socialite::fake('gmail', connectedGmailUser());
+    $social = connectedGmailUser();
+    $social->approvedScopes[] = 'https://www.googleapis.com/auth/calendar.readonly';
+
+    Socialite::fake('gmail', $social);
     bindMailboxOAuthWorkspace($this->user);
 
     $this->get(route('email-accounts.callback', ['provider' => 'gmail']))->assertRedirect();
@@ -302,25 +333,6 @@ it('does not probe google services for a microsoft account', function (): void {
 
     Http::assertNotSent(fn ($request): bool => str_contains($request->url(), 'googleapis.com'));
 });
-
-function googleError(int $status, string $reason, string $message): PromiseInterface
-{
-    return Http::response([
-        'error' => [
-            'code' => $status,
-            'message' => $message,
-            'errors' => [['message' => $message, 'domain' => 'global', 'reason' => $reason]],
-        ],
-    ], $status);
-}
-
-function fakeGoogleProbe(?PromiseInterface $mail = null, ?PromiseInterface $calendar = null): void
-{
-    Http::fake([
-        'gmail.googleapis.com/gmail/v1/users/me/profile*' => $mail ?? Http::response(['emailAddress' => 'connected@example.com']),
-        'www.googleapis.com/calendar/v3/users/me/calendarList*' => $calendar ?? Http::response(['items' => []]),
-    ]);
-}
 
 function connectedGmailUser(): SocialiteUser
 {

@@ -207,6 +207,8 @@ it('preserves the stored refresh token when a reconnect returns none', function 
             'https://www.googleapis.com/auth/gmail.send',
         ];
 
+        fakeGoogleProbe();
+
         Socialite::fake('gmail', $social);
         bindMailboxOAuthWorkspace($user);
 
@@ -244,6 +246,8 @@ it('restarts history import when an active mailbox is reconnected', function ():
             'https://www.googleapis.com/auth/gmail.readonly',
             'https://www.googleapis.com/auth/gmail.send',
         ];
+
+        fakeGoogleProbe();
 
         Socialite::fake('gmail', $social);
         bindMailboxOAuthWorkspace($user);
@@ -301,6 +305,8 @@ it('dispatches history import when a disconnected account is reconnected', funct
         'https://www.googleapis.com/auth/gmail.send',
     ];
 
+    fakeGoogleProbe();
+
     Socialite::fake('gmail', $social);
     bindMailboxOAuthWorkspace($user);
     $this->get(route('email-accounts.callback', ['provider' => 'gmail']))->assertRedirect();
@@ -346,6 +352,8 @@ it('dispatches history import when reconnecting a mailbox whose listing stopped'
         'https://www.googleapis.com/auth/gmail.readonly',
         'https://www.googleapis.com/auth/gmail.send',
     ];
+
+    fakeGoogleProbe();
 
     Socialite::fake('gmail', $social);
     bindMailboxOAuthWorkspace($user);
@@ -394,6 +402,8 @@ it('dispatches history import when reauthenticating a live mailbox whose listing
         'https://www.googleapis.com/auth/gmail.send',
     ];
 
+    fakeGoogleProbe();
+
     Socialite::fake('gmail', $social);
     bindMailboxOAuthWorkspace($user);
     $this->get(route('email-accounts.callback', ['provider' => 'gmail']))->assertRedirect();
@@ -436,6 +446,8 @@ it('dispatches history import when reauthenticating a mailbox that already finis
         'https://www.googleapis.com/auth/gmail.readonly',
         'https://www.googleapis.com/auth/gmail.send',
     ];
+
+    fakeGoogleProbe();
 
     Socialite::fake('gmail', $social);
     bindMailboxOAuthWorkspace($user);
@@ -481,6 +493,8 @@ it('does not start a second history import when reauthenticating during listing'
         'https://www.googleapis.com/auth/gmail.readonly',
         'https://www.googleapis.com/auth/gmail.send',
     ];
+
+    fakeGoogleProbe();
 
     Socialite::fake('gmail', $social);
     bindMailboxOAuthWorkspace($user);
@@ -532,6 +546,8 @@ it('keeps a failed listing failed while store jobs drain and recovers after they
         'https://www.googleapis.com/auth/gmail.readonly',
         'https://www.googleapis.com/auth/gmail.send',
     ];
+
+    fakeGoogleProbe();
 
     Socialite::fake('gmail', $social);
     bindMailboxOAuthWorkspace($user);
@@ -597,6 +613,8 @@ it('connects the mailbox to the workspace where authorization started after the 
         'https://www.googleapis.com/auth/gmail.send',
     ];
 
+    fakeGoogleProbe();
+
     Socialite::fake('gmail', $social);
 
     $this->get(route('email-accounts.callback', ['provider' => 'gmail']))
@@ -649,6 +667,8 @@ it('does not connect a mailbox when the user left the authorizing workspace', fu
         'https://www.googleapis.com/auth/gmail.send',
     ];
 
+    fakeGoogleProbe();
+
     Socialite::fake('gmail', $social);
 
     $this->get(route('email-accounts.callback', ['provider' => 'gmail']))
@@ -680,6 +700,8 @@ it('stores a separate connected account when the same mailbox is connected in a 
             'https://www.googleapis.com/auth/gmail.readonly',
             'https://www.googleapis.com/auth/gmail.send',
         ];
+
+        fakeGoogleProbe();
 
         Socialite::fake('gmail', $social);
         bindMailboxOAuthWorkspace($user);
@@ -744,6 +766,8 @@ it('reconnects a previously default mailbox without violating the live default c
         'https://www.googleapis.com/auth/gmail.send',
     ];
 
+    fakeGoogleProbe();
+
     Socialite::fake('gmail', $social);
     bindMailboxOAuthWorkspace($user);
 
@@ -772,6 +796,8 @@ it('makes the first connected account the default and leaves later connections n
             'https://www.googleapis.com/auth/gmail.readonly',
             'https://www.googleapis.com/auth/gmail.send',
         ];
+
+        fakeGoogleProbe();
 
         Socialite::fake('gmail', $social);
         bindMailboxOAuthWorkspace($user);
