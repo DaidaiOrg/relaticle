@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d76ae71c6104ebb3d9adec3b4ee90301",
+    "content-hash": "51b6ea145ac652fb378d8d37104c1170",
     "packages": [
         {
             "name": "andreiio/blade-remix-icon",
@@ -10631,16 +10631,16 @@
         },
         {
             "name": "relaticle/flowforge",
-            "version": "4.x-dev",
+            "version": "v4.3.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/relaticle/flowforge.git",
-                "reference": "9de548ff77582bbb9ce1e08075c6d8577a11f3cd"
+                "reference": "68c70c1407640a96677ee4e38d249c35951b98fd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/relaticle/flowforge/zipball/9de548ff77582bbb9ce1e08075c6d8577a11f3cd",
-                "reference": "9de548ff77582bbb9ce1e08075c6d8577a11f3cd",
+                "url": "https://api.github.com/repos/relaticle/flowforge/zipball/68c70c1407640a96677ee4e38d249c35951b98fd",
+                "reference": "68c70c1407640a96677ee4e38d249c35951b98fd",
                 "shasum": ""
             },
             "require": {
@@ -10671,7 +10671,6 @@
             "suggest": {
                 "filament/filament": "Required for BoardPage, BoardResourcePage, and FlowforgePlugin panel integration (^5.0)"
             },
-            "default-branch": true,
             "type": "library",
             "extra": {
                 "laravel": {
@@ -10717,7 +10716,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-10-20T13:00:27+00:00"
+            "time": "2026-10-20T13:43:14+00:00"
         },
         {
             "name": "relaticle/ink",
@@ -24396,18 +24395,11 @@
             "version": "dev-tia-warmup-worktrees",
             "alias": "5.3.0",
             "alias_normalized": "5.3.0.0"
-        },
-        {
-            "package": "relaticle/flowforge",
-            "version": "4.9999999.9999999.9999999-dev",
-            "alias": "4.3.1",
-            "alias_normalized": "4.3.1.0"
         }
     ],
     "minimum-stability": "beta",
     "stability-flags": {
         "pestphp/pest": 20,
-        "relaticle/flowforge": 20,
         "spatie/guidelines-skills": 20
     },
     "prefer-stable": true,
