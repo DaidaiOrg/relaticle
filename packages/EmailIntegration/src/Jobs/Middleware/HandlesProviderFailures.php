@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Relaticle\EmailIntegration\Jobs\Middleware;
 
 use Closure;
-use Google\Service\Exception as GoogleServiceException;
 use Illuminate\Queue\Jobs\SyncJob;
 use Relaticle\EmailIntegration\Actions\CompleteMailboxHistoryImportAction;
 use Relaticle\EmailIntegration\Actions\StopCalendarPushChannelAction;
 use Relaticle\EmailIntegration\Enums\EmailAccountStatus;
+use Relaticle\EmailIntegration\Enums\GoogleDisabledService;
 use Relaticle\EmailIntegration\Enums\SyncErrorReason;
 use Relaticle\EmailIntegration\Jobs\Concerns\DetectsAuthErrors;
 use Relaticle\EmailIntegration\Jobs\EnsureCalendarPushChannelJob;
@@ -38,15 +38,15 @@ final class HandlesProviderFailures
             // A sync queue cannot run a released job again, so the failure stays loud there.
             throw_if($job->job instanceof SyncJob, $exception);
 
-            $disabledService = $this->disabledService($exception);
+            $disabledService = GoogleDisabledService::fromException($exception);
 
-            if ($disabledService === 'calendar') {
+            if ($disabledService === GoogleDisabledService::Calendar) {
                 $this->disableCalendar($job);
 
                 return;
             }
 
-            if ($disabledService === 'mail') {
+            if ($disabledService === GoogleDisabledService::Mail) {
                 $this->failMailDisabled($job, $exception);
 
                 return;
@@ -72,27 +72,6 @@ final class HandlesProviderFailures
 
             $job->fail($exception);
         }
-    }
-
-    private function disabledService(Throwable $exception): ?string
-    {
-        if (! $exception instanceof GoogleServiceException) {
-            return null;
-        }
-
-        foreach ($exception->getErrors() ?? [] as $error) {
-            $reason = $error['reason'] ?? null;
-
-            if ($reason === 'notACalendarUser') {
-                return 'calendar';
-            }
-
-            if ($reason === 'failedPrecondition' && stripos((string) ($error['message'] ?? ''), 'Mail service not enabled') !== false) {
-                return 'mail';
-            }
-        }
-
-        return null;
     }
 
     private function disableCalendar(

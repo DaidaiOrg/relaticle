@@ -14,7 +14,10 @@ use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\InvalidStateException;
 use Laravel\Socialite\Two\User as TwoUser;
 use Relaticle\EmailIntegration\Actions\ConnectAccountAction;
+use Relaticle\EmailIntegration\Actions\ProbeGoogleServices;
 use Relaticle\EmailIntegration\Data\ConnectAccountData;
+use Relaticle\EmailIntegration\Data\GoogleServiceAvailability;
+use Relaticle\EmailIntegration\Enums\SyncErrorReason;
 use Relaticle\EmailIntegration\Filament\Pages\EmailAccountsPage;
 use Relaticle\EmailIntegration\Support\MailboxOAuthWorkspace;
 use RuntimeException;
@@ -112,13 +115,13 @@ final readonly class CallbackController
             return $this->redirectWithError($request, $user, 'Relaticle needs permission to read your mail. Reconnect and allow every permission.', $workspace);
         }
 
-        $this->connect($user, $workspace, $provider, $socialUser);
+        $availability = $this->probeAvailability($provider, $socialUser);
 
-        Notification::make()
-            ->title(__('filament/pages/email-accounts.notifications.connected.title'))
-            ->body(__('filament/pages/email-accounts.notifications.connected.body'))
-            ->success()
-            ->send();
+        if (! $availability->mail) {
+            return $this->redirectWithError($request, $user, SyncErrorReason::GoogleMailDisabled->getLabel(), $workspace);
+        }
+
+        $this->connectAndNotify($user, $workspace, $provider, $socialUser, $availability);
 
         $returnUrl = $request->session()->pull(RedirectController::RETURN_URL_SESSION_KEY);
 
@@ -127,7 +130,36 @@ final readonly class CallbackController
         ]));
     }
 
-    private function connect(User $user, Workspace $workspace, string $provider, TwoUser $socialUser): void
+    private function connectAndNotify(User $user, Workspace $workspace, string $provider, TwoUser $socialUser, GoogleServiceAvailability $availability): void
+    {
+        $calendarGranted = $this->detectCalendarCapability($provider, $socialUser->approvedScopes);
+
+        $this->connect($user, $workspace, $provider, $socialUser, hasCalendar: $calendarGranted && $availability->calendar);
+
+        Notification::make()
+            ->title(__('filament/pages/email-accounts.notifications.connected.title'))
+            ->body(__('filament/pages/email-accounts.notifications.connected.body'))
+            ->success()
+            ->send();
+
+        if ($calendarGranted && ! $availability->calendar) {
+            Notification::make()
+                ->title(__('filament/pages/email-accounts.sync_error.reasons.google_calendar_disabled'))
+                ->warning()
+                ->send();
+        }
+    }
+
+    private function probeAvailability(string $provider, TwoUser $socialUser): GoogleServiceAvailability
+    {
+        if ($provider !== 'gmail') {
+            return new GoogleServiceAvailability(mail: true, calendar: true);
+        }
+
+        return resolve(ProbeGoogleServices::class)->execute($socialUser->token);
+    }
+
+    private function connect(User $user, Workspace $workspace, string $provider, TwoUser $socialUser, bool $hasCalendar): void
     {
         /** @var array<int, string> $grantedScopes */
         $grantedScopes = $socialUser->approvedScopes;
@@ -142,7 +174,7 @@ final readonly class CallbackController
             accessToken: $socialUser->token,
             refreshToken: $socialUser->refreshToken,
             tokenExpiresAt: now()->addSeconds($socialUser->expiresIn),
-            hasCalendar: $this->detectCalendarCapability($provider, $grantedScopes),
+            hasCalendar: $hasCalendar,
             hasSend: $this->detectSendCapability($provider, $grantedScopes),
         ));
     }
