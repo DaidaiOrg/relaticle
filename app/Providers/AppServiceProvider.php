@@ -503,13 +503,13 @@ final class AppServiceProvider extends ServiceProvider
             $key = $tokenId ?: $request->ip();
 
             $limits = [
-                Limit::perMinute(600)->by('workspace:'.($workspaceId ?? $request->ip())),
+                Limit::perMinute(config()->integer('relaticle.api_rate_limits.workspace_per_minute'))->by('workspace:'.($workspaceId ?? $request->ip())),
             ];
 
             if ($request->isMethod('GET')) {
-                $limits[] = Limit::perMinute(300)->by("token:{$key}:read");
+                $limits[] = Limit::perMinute(config()->integer('relaticle.api_rate_limits.reads_per_minute'))->by("token:{$key}:read");
             } else {
-                $limits[] = Limit::perMinute(60)->by("token:{$key}:write");
+                $limits[] = Limit::perMinute(config()->integer('relaticle.api_rate_limits.writes_per_minute'))->by("token:{$key}:write");
             }
 
             return $limits;

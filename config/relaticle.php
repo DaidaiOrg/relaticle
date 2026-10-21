@@ -55,6 +55,23 @@ return [
         ))),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | REST API Rate Limits
+    |--------------------------------------------------------------------------
+    |
+    | Requests per minute allowed on the REST API. Writes and reads are
+    | counted per access token; the workspace limit caps all tokens in one
+    | workspace together.
+    |
+    */
+
+    'api_rate_limits' => [
+        'writes_per_minute' => (int) env('API_RATE_LIMIT_WRITES_PER_MINUTE', 60),
+        'reads_per_minute' => (int) env('API_RATE_LIMIT_READS_PER_MINUTE', 300),
+        'workspace_per_minute' => (int) env('API_RATE_LIMIT_WORKSPACE_PER_MINUTE', 600),
+    ],
+
     'features' => [
         'account_deletion' => (bool) env('RELATICLE_FEATURE_ACCOUNT_DELETION', false),
         'onboard_seed' => (bool) env('RELATICLE_FEATURE_ONBOARD_SEED', true),

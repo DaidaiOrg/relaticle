@@ -7,6 +7,7 @@ use App\Http\Middleware\SetApiWorkspaceContext;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\TransientToken;
@@ -22,6 +23,21 @@ beforeEach(function () {
     $this->user = User::factory()->withPersonalWorkspace()->create();
     $this->workspace = $this->user->personalWorkspace();
 });
+
+/**
+ * @return array<string, int>
+ */
+function resolvedApiLimits(User $user, string $method): array
+{
+    $request = Request::create('/api/v1/companies', $method);
+    $request->setUserResolver(fn (): User => $user);
+
+    return collect(RateLimiter::limiter('api')($request))
+        ->mapWithKeys(fn (Limit $limit): array => [
+            (str_starts_with((string) $limit->key, 'workspace:') ? 'workspace' : str((string) $limit->key)->afterLast(':')->value()) => $limit->maxAttempts,
+        ])
+        ->all();
+}
 
 describe('ForceJsonResponse', function (): void {
     it('returns JSON even without Accept header', function (): void {
@@ -79,6 +95,43 @@ describe('rate limiting', function (): void {
         $this->withToken($token)
             ->postJson('/api/v1/companies', ['name' => 'B'])
             ->assertCreated();
+
+        $this->withToken($token)
+            ->postJson('/api/v1/companies', ['name' => 'C'])
+            ->assertTooManyRequests();
+    });
+});
+
+describe('configurable rate limits', function (): void {
+    it('keeps 60 writes, 300 reads and 600 per workspace when nothing is configured', function (): void {
+        expect(config('relaticle.api_rate_limits'))->toBe([
+            'writes_per_minute' => 60,
+            'reads_per_minute' => 300,
+            'workspace_per_minute' => 600,
+        ]);
+
+        expect(resolvedApiLimits($this->user, 'POST'))->toBe(['workspace' => 600, 'write' => 60])
+            ->and(resolvedApiLimits($this->user, 'GET'))->toBe(['workspace' => 600, 'read' => 300]);
+    });
+
+    it('uses the configured limits', function (): void {
+        config([
+            'relaticle.api_rate_limits.writes_per_minute' => 300,
+            'relaticle.api_rate_limits.reads_per_minute' => 450,
+            'relaticle.api_rate_limits.workspace_per_minute' => 900,
+        ]);
+
+        expect(resolvedApiLimits($this->user, 'PATCH'))->toBe(['workspace' => 900, 'write' => 300])
+            ->and(resolvedApiLimits($this->user, 'GET'))->toBe(['workspace' => 900, 'read' => 450]);
+    });
+
+    it('throttles writes at the configured limit', function (): void {
+        config(['relaticle.api_rate_limits.writes_per_minute' => 2]);
+
+        $token = $this->user->createToken('test', ['*'])->plainTextToken;
+
+        $this->withToken($token)->postJson('/api/v1/companies', ['name' => 'A'])->assertCreated();
+        $this->withToken($token)->postJson('/api/v1/companies', ['name' => 'B'])->assertCreated();
 
         $this->withToken($token)
             ->postJson('/api/v1/companies', ['name' => 'C'])
