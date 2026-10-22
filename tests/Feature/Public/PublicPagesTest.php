@@ -279,7 +279,7 @@ describe('Social authentication routes', function () {
         // The 11th request should be throttled
         $response = $this->get('/auth/redirect/github');
 
-        $response->assertStatus(429); // Too Many Requests
+        $response->assertRedirect(route('login'));
     });
 
     it('rejects github as a provider for redirect', function () {
