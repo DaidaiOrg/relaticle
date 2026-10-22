@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\UserSocialAccount;
 use App\Support\Auth\AuthenticationSession;
 use App\Support\Auth\IdentityConfirmation;
+use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Foundation\Bootstrap\LoadConfiguration;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Testing\CachedState;
@@ -242,6 +243,25 @@ test('callback from socialite provider handles missing code parameter', function
 
     $errors = session('errors')->getBag('default');
     expect($errors->first('login'))->toBe('Authorization was cancelled or failed. Please try again.');
+});
+
+test('a throttled social callback returns to the sign-in page instead of a bare error page', function () {
+    $this->freezeTime();
+
+    foreach (range(1, 10) as $attempt) {
+        $this->get(route('auth.socialite.callback', ['provider' => SocialiteProvider::GOOGLE->value]));
+    }
+
+    $this->get(route('auth.socialite.callback', ['provider' => SocialiteProvider::GOOGLE->value]))
+        ->assertRedirect(route('login'));
+
+    FilamentNotification::assertNotified(
+        FilamentNotification::make()
+            ->title(__('auth.provider.failed_title'))
+            ->body(__('auth.throttle', ['seconds' => 60]))
+            ->danger()
+            ->persistent(),
+    );
 });
 
 test('callback from socialite provider rejects a disposable email address', function () {
