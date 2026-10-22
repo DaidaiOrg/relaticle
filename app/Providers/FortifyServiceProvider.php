@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Laravel\Fortify\Events\PasswordUpdatedViaController;
 use Laravel\Fortify\Events\TwoFactorAuthenticationConfirmed;
 use Laravel\Fortify\Fortify;
 use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
@@ -75,6 +76,13 @@ final class FortifyServiceProvider extends ServiceProvider
         // Confirming a TOTP code during enrollment is itself MFA proof for the
         // session that just performed it, not only for logins completed afterward.
         Event::listen(TwoFactorAuthenticationConfirmed::class, MarkTwoFactorEnrollmentCompleteListener::class);
+
+        // AuthenticateSession compares this hash, so the session that changed the password stays signed in.
+        Event::listen(function (PasswordUpdatedViaController $event): void {
+            if (request()->hasSession()) {
+                request()->session()->put('password_hash_'.auth()->getDefaultDriver(), $event->user->getAuthPassword());
+            }
+        });
 
         RateLimiter::for('login', function (Request $request): Limit {
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());

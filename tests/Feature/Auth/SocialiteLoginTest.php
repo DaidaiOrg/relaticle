@@ -520,6 +520,7 @@ test('link callback rejects a grant minted before the password was rotated', fun
     $this->get(route('auth.socialite.link.redirect', ['provider' => SocialiteProvider::GOOGLE->value]));
 
     $user->forceFill(['password' => Hash::make('a-brand-new-password')])->save();
+    session()->put('password_hash_web', $user->getAuthPassword());
 
     Socialite::fake(
         SocialiteProvider::GOOGLE->value,

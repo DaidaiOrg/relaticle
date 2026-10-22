@@ -116,6 +116,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Global rather than the web group: Filament panel routes do not run the web group.
         $middleware->append(SecurityHeaders::class);
 
+        $middleware->authenticateSessions();
+
         $middleware->web(
             append: [
                 'auth.context',
