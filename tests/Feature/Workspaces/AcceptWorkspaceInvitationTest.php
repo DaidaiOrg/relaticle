@@ -205,7 +205,7 @@ test('accepting invitation deletes the invitation record', function () {
     expect(WorkspaceInvitation::count())->toBe(0);
 });
 
-test('user with scheduled deletion cannot accept invitation', function () {
+test('a user scheduled for deletion is sent to the deletion interstitial instead of the invitation', function () {
     $user = User::factory()->withPersonalWorkspace()->scheduledForDeletion()->create();
 
     $workspace = Workspace::factory()->create();
@@ -216,11 +216,15 @@ test('user with scheduled deletion cannot accept invitation', function () {
         'expires_at' => now()->addDays(7),
     ]);
 
-    $joinUrl = route('workspace-invitations.token.join', ['token' => rawTokenFor($invitation)]);
+    $raw = rawTokenFor($invitation);
 
     $this->actingAs($user)
-        ->post($joinUrl)
-        ->assertForbidden();
+        ->get(route('workspace-invitations.token.accept', ['token' => $raw]))
+        ->assertRedirect(route('filament.app.scheduled-deletion'));
+
+    $this->actingAs($user)
+        ->post(route('workspace-invitations.token.join', ['token' => $raw]))
+        ->assertRedirect(route('filament.app.scheduled-deletion'));
 
     expect($workspace->fresh()->hasUser($user))->toBeFalse();
 });

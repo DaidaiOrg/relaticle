@@ -263,7 +263,7 @@ test('unauthenticated attempts against the join link route are rate limited', fu
         ->assertStatus(429);
 });
 
-test('user scheduled for deletion cannot view join confirmation', function (): void {
+test('user scheduled for deletion is sent to the deletion interstitial instead of the join confirmation', function (): void {
     $owner = User::factory()->create();
     $workspace = resolve(CreateWorkspace::class)->create($owner, [
         'name' => 'Acme',
@@ -277,7 +277,7 @@ test('user scheduled for deletion cannot view join confirmation', function (): v
 
     $this->actingAs($joiner)
         ->get(route('workspaces.join', ['token' => $workspace->invite_link_token]))
-        ->assertForbidden();
+        ->assertRedirect(route('filament.app.scheduled-deletion'));
 
     expect($workspace->fresh()->users()->where('users.id', $joiner->id)->exists())->toBeFalse();
 });
@@ -296,7 +296,7 @@ test('user scheduled for deletion cannot POST to join', function (): void {
 
     $this->actingAs($joiner)
         ->post(route('workspaces.join.confirm', ['token' => $workspace->invite_link_token]))
-        ->assertForbidden();
+        ->assertRedirect(route('filament.app.scheduled-deletion'));
 
     expect($workspace->fresh()->users()->where('users.id', $joiner->id)->exists())->toBeFalse();
 });

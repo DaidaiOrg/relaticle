@@ -33,6 +33,7 @@ use App\Http\Controllers\PrivacyPolicyController;
 use App\Http\Controllers\SwitchInvitationAccountController;
 use App\Http\Controllers\TermsOfServiceController;
 use App\Http\Middleware\AddVaryAcceptHeader;
+use App\Http\Middleware\CheckScheduledDeletion;
 use App\Http\Middleware\EnsureSocialiteProviderIsAvailable;
 use App\Http\Middleware\ThrottleBeforeAuthentication;
 use Illuminate\Http\RedirectResponse;
@@ -204,12 +205,12 @@ Route::middleware(['auth', 'verified', 'no-referrer', AuthenticateSession::class
     // spend the allowance the accept POST needs.
     Route::get('/invitations/{token}', [AcceptWorkspaceInvitationController::class, 'show'])
         ->where('token', '[A-Za-z0-9]{40}')
-        ->middleware(ThrottleBeforeAuthentication::class.':10,1,invitation-show')
+        ->middleware([ThrottleBeforeAuthentication::class.':10,1,invitation-show', CheckScheduledDeletion::class])
         ->name('workspace-invitations.token.accept');
 
     Route::post('/invitations/{token}', [AcceptWorkspaceInvitationController::class, 'store'])
         ->where('token', '[A-Za-z0-9]{40}')
-        ->middleware(ThrottleBeforeAuthentication::class.':10,1,invitation-join')
+        ->middleware([ThrottleBeforeAuthentication::class.':10,1,invitation-join', CheckScheduledDeletion::class])
         ->name('workspace-invitations.token.join');
 
     // Signing out returns here rather than to the marketing home, so the invitee
@@ -224,12 +225,12 @@ Route::middleware(['auth', 'verified', 'no-referrer', AuthenticateSession::class
     ->group(function (): void {
         Route::get('/join/{token}', [JoinWorkspaceViaLinkController::class, 'show'])
             ->where('token', '[A-Za-z0-9]{40}')
-            ->middleware(ThrottleBeforeAuthentication::class.':10,1,workspace-join-show')
+            ->middleware([ThrottleBeforeAuthentication::class.':10,1,workspace-join-show', CheckScheduledDeletion::class])
             ->name('workspaces.join');
 
         Route::post('/join/{token}', [JoinWorkspaceViaLinkController::class, 'store'])
             ->where('token', '[A-Za-z0-9]{40}')
-            ->middleware(ThrottleBeforeAuthentication::class.':10,1,workspace-join-confirm')
+            ->middleware([ThrottleBeforeAuthentication::class.':10,1,workspace-join-confirm', CheckScheduledDeletion::class])
             ->name('workspaces.join.confirm');
     });
 
