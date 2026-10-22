@@ -12,6 +12,7 @@ return [
         'continue' => 'Continue',
         'use_password' => 'Use your password instead',
         'passkey_waiting' => 'Waiting for your passkey…',
+        'account_exists' => 'An account with this email address already exists. Sign in to it instead.',
         'social_hint' => 'This account signs in with :provider. Use the Continue with :provider button above.',
         'last_used' => 'Last used',
         'continue_with' => 'Continue with :provider',

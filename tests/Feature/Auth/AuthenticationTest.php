@@ -1206,7 +1206,27 @@ test('signup rejects a duplicate email at submission', function (): void {
     $component
         ->fillForm(['password' => 'Password123!'])
         ->call('authenticate')
-        ->assertHasFormErrors(['email']);
+        ->assertHasFormErrors(['email' => __('auth.login.account_exists')])
+        ->assertSet('authMethod', 'password');
+
+    expect(User::where('email', $email)->count())->toBe(1);
+});
+
+test('signup moves to sign-in when the account appears under a different letter case', function (): void {
+    $email = 'dup-case-'.uniqid().'@gmail.com';
+
+    $component = livewire(Login::class)
+        ->fillForm(['email' => strtoupper($email)])
+        ->call('authenticate')
+        ->assertSet('authMethod', 'signup');
+
+    User::factory()->create(['email' => $email]);
+
+    $component
+        ->fillForm(['password' => 'Password123!'])
+        ->call('authenticate')
+        ->assertHasFormErrors(['email' => __('auth.login.account_exists')])
+        ->assertSet('authMethod', 'password');
 
     expect(User::where('email', $email)->count())->toBe(1);
 });

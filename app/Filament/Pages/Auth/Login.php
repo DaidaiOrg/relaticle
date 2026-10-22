@@ -207,6 +207,10 @@ final class Login extends \Filament\Auth\Pages\Login
             return null;
         }
 
+        if (User::query()->where('email', $submittedEmail)->exists()) {
+            $this->switchToSignInForExistingAccount();
+        }
+
         try {
             $data = $this->form->getState();
         } catch (ValidationException $exception) {
@@ -244,12 +248,20 @@ final class Login extends \Filament\Auth\Pages\Login
         try {
             return resolve(CreateNewUser::class)->execute($email, $hashedPassword);
         } catch (UniqueConstraintViolationException) {
-            $this->resetTurnstileChallenge();
-
-            throw ValidationException::withMessages([
-                'data.email' => __('validation.unique', ['attribute' => __('filament-panels::auth/pages/login.form.email.label')]),
-            ]);
+            $this->switchToSignInForExistingAccount();
         }
+    }
+
+    private function switchToSignInForExistingAccount(): never
+    {
+        $this->resetTurnstileChallenge();
+        $this->authMethod = null;
+        $this->passkeyUserHasPassword = false;
+        $this->discover();
+
+        throw ValidationException::withMessages([
+            'data.email' => __('auth.login.account_exists'),
+        ]);
     }
 
     private function getPasswordHelperText(): ?string
