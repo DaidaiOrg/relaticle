@@ -24,6 +24,18 @@ it('flags the session for signup analytics tracking on signup', function (): voi
     expect(session()->get('fathom.track_signup'))->toBeTrue();
 });
 
+it('names a user who signs up with a plus address without the tag', function (): void {
+    $email = 'jane.doe+trial-'.uniqid().'@gmail.com';
+
+    livewire(Login::class)
+        ->fillForm(['email' => $email])
+        ->call('authenticate')
+        ->fillForm(['password' => 'Password123!'])
+        ->call('authenticate');
+
+    expect(User::query()->where('email', $email)->sole()->name)->toBe('Jane Doe');
+});
+
 it('throttles repeated signup submissions on one discovery', function (): void {
     $component = livewire(Login::class)
         ->fillForm(['email' => 'throttle-'.uniqid().'@gmail.com'])

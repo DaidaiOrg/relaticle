@@ -123,6 +123,9 @@ return [
     ],
 
     'validation' => [
+        'slug_too_short' => 'The :attribute must be at least 3 characters.',
+        'slug_format' => 'The :attribute may only contain lowercase letters, numbers, and hyphens.',
+        'slug_reserved' => 'The :attribute is reserved and cannot be used.',
         'email_already_invited' => 'This user has already been invited to the workspace.',
         'email_already_member' => 'This user already belongs to the workspace.',
         'only_owner_promotes_admins' => 'Only the workspace owner can grant the Admin role.',

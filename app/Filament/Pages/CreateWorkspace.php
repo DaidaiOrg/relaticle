@@ -281,6 +281,7 @@ final class CreateWorkspace extends RegisterTenant
 
             TextInput::make('user_name')
                 ->label(__('filament/pages/workspaces.create_workspace.form.your_name.label'))
+                ->trim()
                 ->required()
                 ->maxLength(255)
                 ->placeholder(__('filament/pages/workspaces.create_workspace.form.your_name.placeholder'))
@@ -295,6 +296,7 @@ final class CreateWorkspace extends RegisterTenant
 
             TextInput::make('name')
                 ->label(__('filament/pages/workspaces.create_workspace.form.workspace_name.label'))
+                ->trim()
                 ->autofocus()
                 ->required()
                 ->maxLength(255)

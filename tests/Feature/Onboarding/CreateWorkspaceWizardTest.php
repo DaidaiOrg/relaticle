@@ -83,6 +83,20 @@ it('does not flag the workspace created event for an additional workspace', func
         ->and(session()->has('fathom.track_workspace_created'))->toBeFalse();
 });
 
+it('stores the names typed in the wizard without surrounding spaces', function (): void {
+    $user = User::factory()->create();
+
+    $this->actingAs($user);
+
+    livewire(CreateWorkspace::class)
+        ->fillForm(['user_name' => '  Jane Doe  ', 'name' => '  Padded Corp  '])
+        ->call('register')
+        ->assertHasNoFormErrors();
+
+    expect(Workspace::query()->where('name', 'Padded Corp')->exists())->toBeTrue()
+        ->and($user->fresh()->name)->toBe('Jane Doe');
+});
+
 it('opens the workspace it already made when the wizard is submitted twice', function (): void {
     $user = User::factory()->withPersonalWorkspace()->create();
 
