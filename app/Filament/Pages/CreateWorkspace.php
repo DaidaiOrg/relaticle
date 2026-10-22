@@ -36,6 +36,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\HtmlString;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
+use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Locked;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Override;
 
@@ -48,6 +50,9 @@ final class CreateWorkspace extends RegisterTenant
     protected array $extraBodyAttributes = [
         'class' => 'fi-onboarding-wizard',
     ];
+
+    #[Locked]
+    public bool $isFirstRun = false;
 
     public function getMaxContentWidth(): Width
     {
@@ -71,7 +76,21 @@ final class CreateWorkspace extends RegisterTenant
             return;
         }
 
+        $this->isFirstRun = $this->ownsNoWorkspace();
+
         parent::mount();
+    }
+
+    #[Override]
+    public function register(): void
+    {
+        if ($this->tenant instanceof Workspace) {
+            $this->redirect(SetupWorkspace::getUrl(['tenant' => $this->tenant]));
+
+            return;
+        }
+
+        parent::register();
     }
 
     #[Override]
@@ -331,12 +350,12 @@ final class CreateWorkspace extends RegisterTenant
         // channel that acquired them, so counting it would misattribute the
         // channel AND push signup-to-workspace above 100%. How many workspaces
         // a user owns is a question the workspaces table already answers exactly.
-        if ($user->ownedWorkspaces()->count() === 1) {
-            session()->put('fathom.track_workspace_created', true);
-        }
-
         /** @var Workspace $tenant */
         $tenant = $this->tenant;
+
+        if ($tenant->wasRecentlyCreated && $user->ownedWorkspaces()->count() === 1) {
+            session()->put('fathom.track_workspace_created', true);
+        }
 
         // A full page load: the wizard's Alpine state does not survive a client-side hop,
         // and the torn-down component logs a burst of undefined-variable errors.
@@ -355,13 +374,21 @@ final class CreateWorkspace extends RegisterTenant
         /** @var User $user */
         $user = auth('web')->user();
 
-        $this->updateUserNameIfChanged($user, $data);
-
         if (($this->data['slug_derived'] ?? null) === $data['slug'] && Workspace::query()->where('slug', $data['slug'])->exists()) {
             $data['slug'] = null;
         }
 
-        return resolve(CreateWorkspaceAction::class)->create($user, $data);
+        try {
+            $workspace = resolve(CreateWorkspaceAction::class)->create($user, $data, onlyIfFirst: $this->isFirstRun);
+        } catch (ValidationException $exception) {
+            throw ValidationException::withMessages(
+                collect($exception->errors())->mapWithKeys(fn (array $messages, string $key): array => ["data.{$key}" => $messages])->all(),
+            );
+        }
+
+        $this->updateUserNameIfChanged($user, $data);
+
+        return $workspace;
     }
 
     /**
