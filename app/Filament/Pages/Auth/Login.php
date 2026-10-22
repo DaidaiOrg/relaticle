@@ -166,6 +166,13 @@ final class Login extends \Filament\Auth\Pages\Login
             ]);
         }
 
+        // A pending MFA challenge leaves the pre-login destination in url.intended for CompleteAuthentication.
+        if (! Filament::auth()->check()) {
+            $this->redirect($next);
+
+            return null;
+        }
+
         session()->put('url.intended', $next);
 
         return resolve(LoginResponse::class);

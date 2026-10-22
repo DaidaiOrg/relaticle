@@ -101,6 +101,43 @@ test('password login waits for enrolled MFA before authenticating', function ():
     expect(session('auth.pending.user_id'))->toBe($user->id);
 });
 
+test('password login returns an MFA user to the deep link they opened before signing in', function (): void {
+    $user = User::factory()->withConfirmedMfa()->withWorkspace()->create();
+    $deepLink = url()->getAppUrl("{$user->currentWorkspace->slug}/companies");
+
+    $this->get($deepLink)->assertRedirect();
+
+    livewire(Login::class)
+        ->fillForm(['email' => $user->email])
+        ->call('authenticate')
+        ->fillForm(['password' => 'password'])
+        ->call('authenticate')
+        ->assertRedirect(route('two-factor.login'));
+
+    $this->post(route('two-factor.login.store'), ['recovery_code' => 'recovery-code-one'])
+        ->assertRedirect($deepLink);
+});
+
+test('password login returns an MFA user to the invitation they opened before signing in', function (): void {
+    $user = User::factory()->withConfirmedMfa()->withWorkspace()->create();
+    $invitation = WorkspaceInvitation::factory()->create(['email' => $user->email]);
+    $rawToken = $invitation->issueToken();
+    $invitation->save();
+    $acceptUrl = route('workspace-invitations.token.accept', ['token' => $rawToken]);
+
+    $this->get($acceptUrl)->assertRedirect();
+
+    livewire(Login::class)
+        ->fillForm(['email' => $user->email])
+        ->call('authenticate')
+        ->fillForm(['password' => 'password'])
+        ->call('authenticate')
+        ->assertRedirect(route('two-factor.login'));
+
+    $this->post(route('two-factor.login.store'), ['recovery_code' => 'recovery-code-one'])
+        ->assertRedirect($acceptUrl);
+});
+
 test('the Fortify password route completes login without MFA', function (): void {
     $user = User::factory()->withWorkspace()->create();
 
