@@ -7,9 +7,8 @@ namespace App\Filament\Pages\Auth;
 use App\Actions\Auth\AuthenticatePassword;
 use App\Actions\Fortify\CreateNewUser;
 use App\Concerns\DetectsWorkspaceInvitation;
-use App\Enums\SocialiteProvider;
-use App\Features\SocialAuth;
 use App\Models\User;
+use App\Models\UserSocialAccount;
 use App\Models\WorkspaceInvitation;
 use App\Rules\RegistrableEmail;
 use App\Rules\TurnstileChallenge;
@@ -39,7 +38,6 @@ use Illuminate\Support\HtmlString;
 use Illuminate\Support\Timebox;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
-use Laravel\Pennant\Feature;
 use Livewire\Attributes\Locked;
 use SensitiveParameter;
 use Spatie\Honeypot\Http\Livewire\Concerns\HoneypotData;
@@ -311,15 +309,9 @@ final class Login extends \Filament\Auth\Pages\Login
                 return;
             }
 
-            if (! Feature::active(SocialAuth::class)) {
-                $this->authMethod = 'password';
-
-                return;
-            }
-
-            $this->authMethod = $this->resolveOfferedProvider($user) === null
-                ? 'password'
-                : 'social';
+            $this->authMethod = $user->availableSocialAccount() instanceof UserSocialAccount
+                ? 'social'
+                : 'password';
         }, (int) config('auth.timebox_duration', 200_000));
     }
 
@@ -358,27 +350,6 @@ final class Login extends \Filament\Auth\Pages\Login
         RateLimiter::hit($minuteKey, 60);
         RateLimiter::hit($dayKey, 86400);
         RateLimiter::hit($emailKey, 60);
-    }
-
-    protected function resolveOfferedProvider(User $user): ?string
-    {
-        return $user->socialAccounts()
-            ->pluck('provider_name')
-            ->first(fn (?string $providerName): bool => $this->isProviderOffered($providerName));
-    }
-
-    protected function isProviderOffered(?string $providerName): bool
-    {
-        $provider = SocialiteProvider::tryFrom((string) $providerName);
-
-        if ($provider === null) {
-            return false;
-        }
-
-        return match ($provider) {
-            SocialiteProvider::GOOGLE => true,
-            SocialiteProvider::MICROSOFT => filled(config('services.microsoft.client_id')),
-        };
     }
 
     protected function getAuthenticateFormAction(): Action

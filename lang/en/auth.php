@@ -46,10 +46,12 @@ return [
         'mfa_required' => 'Please enter your authentication code to continue.',
         'failed_title' => 'Confirmation Failed',
         'cancelled' => 'Authorization was cancelled or failed. Please try again.',
-        'state_mismatch' => 'Authentication state mismatch. Please try again.',
+        'state_mismatch' => 'That sign-in expired. Please start again.',
         'not_linked' => 'That account is not linked to your profile.',
     ],
     'provider' => [
+        'failed_title' => 'Sign-in failed',
+        'unverified_email' => 'That account has no verified email address. Verify it with the provider, or sign up with your email address instead.',
         'invalid_request' => 'Invalid authentication request. Please try again.',
         'access_denied' => 'Access was denied. Please authorize the application to continue.',
         'failed' => 'Failed to authenticate with :provider.',

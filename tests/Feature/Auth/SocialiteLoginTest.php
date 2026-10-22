@@ -33,12 +33,13 @@ mutates(
     LinkSocialAccountCallbackController::class,
 );
 
-function makeSocialiteUser(string $id, string $name, string $email): SocialiteUser
+function makeSocialiteUser(string $id, string $name, ?string $email, bool $emailVerified = true): SocialiteUser
 {
     $user = new SocialiteUser;
     $user->id = $id;
     $user->name = $name;
     $user->email = $email;
+    $user->setRaw(['sub' => $id, 'email' => $email, 'email_verified' => $emailVerified]);
 
     return $user;
 }
@@ -271,6 +272,44 @@ test('callback from socialite provider rejects a disposable email address', func
  * than merely incomplete, and it is the undercount that made the Fathom
  * signup series disagree with the users table.
  */
+test('callback refuses to create an account from a google identity whose email google has not verified', function () {
+    Socialite::fake(
+        SocialiteProvider::GOOGLE->value,
+        makeSocialiteUser('unverified-google-id', 'Squatter', 'owner@example.com', emailVerified: false),
+    );
+
+    $response = $this->get(route('auth.socialite.callback', [
+        'provider' => SocialiteProvider::GOOGLE->value,
+        'code' => 'test-code',
+    ]));
+
+    $response->assertRedirect(route('login'));
+    $response->assertSessionHasErrors(['login' => __('auth.provider.unverified_email')]);
+
+    $this->assertDatabaseMissing('users', ['email' => 'owner@example.com']);
+    $this->assertDatabaseMissing('user_social_accounts', ['provider_id' => 'unverified-google-id']);
+    $this->assertGuest();
+});
+
+test('callback refuses to create an account when the provider shares no email address', function () {
+    Socialite::fake(
+        SocialiteProvider::GOOGLE->value,
+        makeSocialiteUser('no-email-google-id', 'No Email', null),
+    );
+
+    $response = $this->get(route('auth.socialite.callback', [
+        'provider' => SocialiteProvider::GOOGLE->value,
+        'code' => 'test-code',
+    ]));
+
+    $response->assertRedirect(route('login'));
+    $response->assertSessionHasErrors(['login' => __('auth.provider.unverified_email')]);
+
+    $this->assertDatabaseMissing('user_social_accounts', ['provider_id' => 'no-email-google-id']);
+    $this->assertDatabaseCount('users', 0);
+    $this->assertGuest();
+});
+
 test('callback flags the signup event when the OAuth user is new', function () {
     Socialite::fake(
         SocialiteProvider::GOOGLE->value,
