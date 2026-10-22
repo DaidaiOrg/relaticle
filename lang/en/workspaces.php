@@ -351,8 +351,8 @@ return [
             'decline' => 'Not now',
         ],
         'expired' => [
-            'heading' => 'Invite link expired',
-            'body' => 'This invite link has expired. Please ask the workspace owner to share a new link.',
+            'heading' => 'This invite link no longer works',
+            'body' => 'It expired, was turned off, or was replaced by a new one. Ask the workspace owner to share the current link.',
             'action' => 'Go to my workspace',
         ],
     ],

@@ -230,11 +230,29 @@ test('a disabled workspace link is unreachable via the token it used to carry', 
 
     $this->actingAs($joiner)
         ->get(route('workspaces.join', ['token' => $originalToken]))
-        ->assertNotFound();
+        ->assertNotFound()
+        ->assertSee(__('workspaces.invite_link.expired.heading'));
 
     $this->actingAs($joiner)
         ->post(route('workspaces.join.confirm', ['token' => $originalToken]))
         ->assertNotFound();
+});
+
+test('a replaced workspace link explains itself instead of a bare not found page', function (): void {
+    $owner = User::factory()->create();
+    $workspace = resolve(CreateWorkspace::class)->create($owner, [
+        'name' => 'Acme',
+        'slug' => 'acme-rotated',
+    ]);
+    $originalToken = $workspace->invite_link_token;
+
+    $workspace->rotateInviteLink();
+
+    $this->actingAs(User::factory()->create(['email_verified_at' => now()]))
+        ->get(route('workspaces.join', ['token' => $originalToken]))
+        ->assertNotFound()
+        ->assertSee(__('workspaces.invite_link.expired.heading'))
+        ->assertSee(__('workspaces.invite_link.expired.action'));
 });
 
 test('guest hitting join link is redirected to login', function (): void {
