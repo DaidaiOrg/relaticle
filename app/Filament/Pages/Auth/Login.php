@@ -17,7 +17,6 @@ use DanHarrin\LivewireRateLimiting\Exceptions\TooManyRequestsException;
 use Filament\Actions\Action;
 use Filament\Auth\Events\Registered;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse;
-use Filament\Auth\Notifications\VerifyEmail;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\TextInput;
@@ -199,6 +198,14 @@ final class Login extends \Filament\Auth\Pages\Login
         $this->protectAgainstSpam();
 
         try {
+            $this->rateLimit(5);
+        } catch (TooManyRequestsException $exception) {
+            $this->getRateLimitedNotification($exception)?->send();
+
+            return null;
+        }
+
+        try {
             $data = $this->form->getState();
         } catch (ValidationException $exception) {
             $this->resetTurnstileChallenge();
@@ -228,25 +235,15 @@ final class Login extends \Filament\Auth\Pages\Login
 
         event(new Registered($user));
 
-        $this->sendEmailVerificationNotification($user);
+        if (! $user->hasVerifiedEmail()) {
+            $user->sendEmailVerificationNotification();
+        }
 
         Filament::auth()->login($user, remember: true);
 
         session()->regenerate();
 
         return resolve(LoginResponse::class);
-    }
-
-    private function sendEmailVerificationNotification(User $user): void
-    {
-        if ($user->hasVerifiedEmail()) {
-            return;
-        }
-
-        $notification = resolve(VerifyEmail::class);
-        $notification->url = Filament::getVerifyEmailUrl($user);
-
-        $user->notify($notification);
     }
 
     private function getPasswordHelperText(): ?string

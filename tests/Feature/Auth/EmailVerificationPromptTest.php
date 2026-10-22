@@ -72,6 +72,86 @@ test('resending starts a cooldown that outlives the page it was started on', fun
         ->toBeGreaterThan(0);
 });
 
+test('a second resend inside the cooldown sends nothing', function () {
+    Notification::fake();
+
+    $user = User::factory()->unverified()->create();
+
+    $this->actingAs($user);
+
+    livewire(EmailVerificationPrompt::class)
+        ->callAction('resendNotification')
+        ->callAction('resendNotification');
+
+    Notification::assertSentToTimes($user, VerifyEmail::class, 1);
+});
+
+test('the Fortify resend route shares the prompt cooldown', function () {
+    Notification::fake();
+
+    $user = User::factory()->unverified()->create();
+
+    $this->actingAs($user);
+
+    livewire(EmailVerificationPrompt::class)->callAction('resendNotification');
+
+    $this->post(route('verification.send'));
+    $this->post(route('verification.send'));
+
+    Notification::assertSentToTimes($user, VerifyEmail::class, 1);
+});
+
+test('signing up starts the resend cooldown', function () {
+    Notification::fake();
+
+    $email = 'cooldown-'.uniqid().'@gmail.com';
+
+    livewire(Login::class)
+        ->fillForm(['email' => $email])
+        ->call('authenticate')
+        ->fillForm(['password' => 'Password123!'])
+        ->call('authenticate');
+
+    $user = User::query()->where('email', $email)->sole();
+
+    $this->actingAs($user);
+
+    livewire(EmailVerificationPrompt::class)->callAction('resendNotification');
+
+    Notification::assertSentToTimes($user, VerifyEmail::class, 1);
+});
+
+test('resending after the address was verified elsewhere moves the user on instead of claiming a resend', function () {
+    Notification::fake();
+
+    $user = User::factory()->unverified()->create();
+
+    $this->actingAs($user);
+
+    $prompt = livewire(EmailVerificationPrompt::class);
+
+    $user->markEmailAsVerified();
+
+    $prompt->callAction('resendNotification')
+        ->assertRedirect(Filament::getUrl());
+
+    Notification::assertNothingSent();
+});
+
+test('changing the address again inside the cooldown still mails the new address', function () {
+    Notification::fake();
+
+    $user = User::factory()->unverified()->create(['email' => 'first@example.test']);
+
+    $user->sendEmailVerificationNotification();
+
+    $user->forceFill(['email' => 'second@example.test'])->save();
+
+    $user->sendEmailVerificationNotification();
+
+    Notification::assertSentToTimes($user, VerifyEmail::class, 2);
+});
+
 test('the prompt lets a signed-in user sign out to use another address', function () {
     $user = User::factory()->unverified()->create();
 
