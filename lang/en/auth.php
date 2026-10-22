@@ -12,7 +12,7 @@ return [
         'continue' => 'Continue',
         'use_password' => 'Use your password instead',
         'passkey_waiting' => 'Waiting for your passkey…',
-        'social_hint' => 'This account uses social sign-in. Continue with one of the options above.',
+        'social_hint' => 'This account signs in with :provider. Use the Continue with :provider button above.',
         'last_used' => 'Last used',
         'continue_with' => 'Continue with :provider',
         'passkey_retry' => 'Try the passkey again',

@@ -8,7 +8,6 @@ use App\Actions\Auth\AuthenticatePassword;
 use App\Actions\Fortify\CreateNewUser;
 use App\Concerns\DetectsWorkspaceInvitation;
 use App\Models\User;
-use App\Models\UserSocialAccount;
 use App\Models\WorkspaceInvitation;
 use App\Rules\RegistrableEmail;
 use App\Rules\TurnstileChallenge;
@@ -55,6 +54,9 @@ final class Login extends \Filament\Auth\Pages\Login
 
     #[Locked]
     public ?string $discoveredEmail = null;
+
+    #[Locked]
+    public ?string $socialProvider = null;
 
     public HoneypotData $extraFields;
 
@@ -273,7 +275,8 @@ final class Login extends \Filament\Auth\Pages\Login
 
         if ($this->authMethod === 'social') {
             return Blade::render(
-                '<p class="mt-3 text-center text-sm text-gray-500 dark:text-gray-400">{{ __(\'auth.login.social_hint\') }}</p>',
+                '<p role="status" class="mt-3 text-center text-sm text-gray-500 dark:text-gray-400">{{ __(\'auth.login.social_hint\', [\'provider\' => $provider]) }}</p>',
+                ['provider' => ucfirst((string) $this->socialProvider)],
             );
         }
 
@@ -317,9 +320,8 @@ final class Login extends \Filament\Auth\Pages\Login
                 return;
             }
 
-            $this->authMethod = $user->availableSocialAccount() instanceof UserSocialAccount
-                ? 'social'
-                : 'password';
+            $this->socialProvider = $user->availableSocialAccount()?->provider_name;
+            $this->authMethod = $this->socialProvider === null ? 'password' : 'social';
         }, (int) config('auth.timebox_duration', 200_000));
     }
 

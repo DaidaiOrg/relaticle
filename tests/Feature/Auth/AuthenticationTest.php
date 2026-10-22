@@ -945,7 +945,7 @@ test('social hint renders after discovering a social-only account', function ():
     livewire(Login::class)
         ->fillForm(['email' => $user->email])
         ->call('authenticate')
-        ->assertSee(__('auth.login.social_hint'));
+        ->assertSee(__('auth.login.social_hint', ['provider' => 'Google']));
 });
 
 test('password fallback link renders only for passkey users with a password', function (): void {
