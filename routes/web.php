@@ -75,7 +75,7 @@ Route::middleware('guest')->group(function () {
 
     Route::get('/register', fn () => redirect()->to(url()->getAppUrl('login')))->name('register');
 
-    Route::get('/forgot-password', fn () => redirect()->to(url()->getAppUrl('forgot-password')))->name('password.request');
+    Route::get('/forgot-password', fn () => redirect()->to(filament()->getPanel('app')->getRequestPasswordResetUrl()))->name('password.request');
 });
 
 Route::middleware('auth')->group(function (): void {

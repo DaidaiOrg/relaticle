@@ -398,7 +398,7 @@ final class Login extends \Filament\Auth\Pages\Login
             ->hiddenLabel()
             ->placeholder(__('auth.login.password_placeholder'))
             ->hint(fn (): ?HtmlString => ($this->authMethod === 'password' && filament()->hasPasswordReset())
-                ? new HtmlString(Blade::render('<x-filament::link :href="filament()->getRequestPasswordResetUrl()" tabindex="-1"> {{ __(\'filament-panels::auth/pages/login.actions.request_password_reset.label\') }}</x-filament::link>'))
+                ? new HtmlString(Blade::render('<x-filament::link :href="filament()->getRequestPasswordResetUrl()"> {{ __(\'filament-panels::auth/pages/login.actions.request_password_reset.label\') }}</x-filament::link>'))
                 : null)
             ->helperText(fn (): ?string => $this->getPasswordHelperText())
             ->password()
