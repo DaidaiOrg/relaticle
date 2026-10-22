@@ -1491,7 +1491,7 @@ describe('invite team', function (): void {
             ->fillForm(['emails' => "maya@northwind.test, leo@northwind.test;\nsam@northwind.test", 'role' => WorkspaceRole::Admin->value])
             ->call('finish')
             ->assertHasNoFormErrors()
-            ->assertNotified(__('workspaces.notifications.workspace_invitation_sent.success'));
+            ->assertNotified(__('workspaces.notifications.workspace_invitation_sent.success_many', ['count' => 3]));
 
         expect($workspace->workspaceInvitations()->pluck('role', 'email')->all())->toEqual([
             'maya@northwind.test' => WorkspaceRole::Admin->value,

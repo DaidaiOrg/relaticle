@@ -79,6 +79,7 @@ return [
     'notifications' => [
         'workspace_invitation_sent' => [
             'success' => 'Invitation sent.',
+            'success_many' => ':count invitations sent.',
         ],
         'workspace_invitation_revoked' => [
             'success' => 'Invitation revoked.',
@@ -371,7 +372,7 @@ return [
     ],
 
     'accept' => [
-        'joined' => 'You have joined the :workspace workspace.',
+        'joined' => 'You have joined :workspace.',
         'already_member' => 'You are already a member of :workspace.',
         'no_longer_valid' => 'That invitation is no longer valid. It may have been revoked or it may have expired.',
         'account_deleting' => 'You cannot accept invitations while your account is scheduled for deletion.',
@@ -396,7 +397,7 @@ return [
         ],
         'expired' => [
             'heading' => 'Invitation no longer valid',
-            'body' => 'This invitation has expired or has already been accepted.',
+            'body' => 'This invitation has expired, was already used, or was replaced by a newer one.',
             'action' => 'Go to my workspace',
         ],
     ],

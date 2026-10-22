@@ -86,6 +86,15 @@ test('invitation expires_at is set based on config', function () {
     expect((int) round($invitation->expires_at->diffInDays(now(), absolute: true)))->toBe(14);
 });
 
+test('inviting several people at once confirms how many were sent', function () {
+    livewire(InviteWorkspaceMembers::class, ['workspace' => $this->workspace])
+        ->callAction('invitePeople', [
+            'emails' => 'first@example.com, second@example.com, third@example.com',
+            'role' => 'member',
+        ])
+        ->assertNotified(__('workspaces.notifications.workspace_invitation_sent.success_many', ['count' => 3]));
+});
+
 test('inviting an address whose invitation expired sends it a fresh one', function () {
     $invite = fn (string $role) => resolve(InviteWorkspaceMember::class)->invite($this->user, $this->workspace, 'lapsed@example.com', $role);
 
