@@ -239,6 +239,22 @@ it('requires a use case', function (): void {
         ->assertHasFormErrors(['onboarding_use_case' => 'required']);
 });
 
+it('clears the required error once the owner picks a use case', function (): void {
+    workspaceInSetup(User::factory()->create());
+
+    livewire(SetupWorkspace::class)
+        ->call('saveUseCase')
+        ->assertHasFormErrors(['onboarding_use_case' => 'required'])
+        ->fillForm(['onboarding_use_case' => OnboardingUseCase::Other->value])
+        ->assertHasNoFormErrors(['onboarding_use_case']);
+});
+
+it('gives the use case button its own loading target', function (): void {
+    workspaceInSetup(User::factory()->create());
+
+    livewire(SetupWorkspace::class)->assertSeeHtml('wire:target="saveUseCase"');
+});
+
 it('labels the use case button Continue because the invite step follows', function (): void {
     workspaceInSetup(User::factory()->create());
 
