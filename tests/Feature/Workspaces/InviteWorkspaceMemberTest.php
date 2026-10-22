@@ -86,6 +86,28 @@ test('invitation expires_at is set based on config', function () {
     expect((int) round($invitation->expires_at->diffInDays(now(), absolute: true)))->toBe(14);
 });
 
+test('inviting an address whose invitation expired sends it a fresh one', function () {
+    $invite = fn (string $role) => resolve(InviteWorkspaceMember::class)->invite($this->user, $this->workspace, 'lapsed@example.com', $role);
+
+    $invite('member');
+    WorkspaceInvitation::query()->where('email', 'lapsed@example.com')->update(['expires_at' => now()->subDay()]);
+
+    $invite('admin');
+
+    $invitation = $this->workspace->fresh()->workspaceInvitations->sole();
+    expect($invitation->isExpired())->toBeFalse()
+        ->and($invitation->role)->toBe('admin');
+
+    Mail::assertQueued(WorkspaceInvitationMail::class, 2);
+});
+
+test('inviting an address with a live invitation is still refused', function () {
+    resolve(InviteWorkspaceMember::class)->invite($this->user, $this->workspace, 'pending@example.com', 'member');
+
+    expect(fn () => resolve(InviteWorkspaceMember::class)->invite($this->user, $this->workspace, 'pending@example.com', 'member'))
+        ->toThrow(ValidationException::class, __('workspaces.validation.email_already_invited'));
+});
+
 test('workspace member invitations can be revoked', function () {
     livewire(InviteWorkspaceMembers::class, ['workspace' => $this->workspace])
         ->callAction('invitePeople', [
