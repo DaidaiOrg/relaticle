@@ -70,6 +70,19 @@ test('accepting an invitation lands the user in the app panel with a visible con
         ->assertSee(__('workspaces.accept.joined', ['workspace' => $this->workspace->name]));
 });
 
+test('the accept page names the account that will join', function () {
+    $invitation = WorkspaceInvitation::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'email' => $this->user->email,
+        'role' => 'member',
+    ]);
+
+    $this->actingAs($this->user)
+        ->get(route('workspace-invitations.token.accept', ['token' => rawTokenFor($invitation)]))
+        ->assertOk()
+        ->assertSeeInOrder([__('workspaces.invite_link.join.joining_as'), $this->user->email]);
+});
+
 test('expired invitation shows the expired state', function () {
     $invitation = WorkspaceInvitation::factory()->create([
         'workspace_id' => $this->workspace->id,
