@@ -14,16 +14,18 @@ final readonly class DestroyOtherBrowserSessions
     public function __construct(private RevokeUserTokens $revokeUserTokens) {}
 
     /**
-     * Destroy every database session for the user except the current request's,
-     * then rotate the remember token so other devices' "remember me" cookies stop
-     * working. Identity is confirmed by the caller before this runs.
+     * Only the database driver can find a user's other live sessions, so the
+     * result says whether they were ended. Identity is confirmed by the caller.
      */
-    public function execute(User $user, string $currentSessionId): void
+    public function execute(User $user, string $currentSessionId): bool
     {
         $this->revokeUserTokens->execute($user);
 
+        $user->setRememberToken(Str::random(60));
+        $user->save();
+
         if (config('session.driver') !== 'database') {
-            return;
+            return false;
         }
 
         DB::connection(config('session.connection'))
@@ -32,7 +34,6 @@ final readonly class DestroyOtherBrowserSessions
             ->where('id', '!=', $currentSessionId)
             ->delete();
 
-        $user->setRememberToken(Str::random(60));
-        $user->save();
+        return true;
     }
 }
