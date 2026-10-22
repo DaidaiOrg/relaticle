@@ -29,6 +29,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Laravel\Passkeys\Events\PasskeyVerified;
 use Laravel\Passkeys\Passkey;
 use Laravel\Passkeys\Passkeys;
@@ -136,6 +137,37 @@ test('password login returns an MFA user to the invitation they opened before si
 
     $this->post(route('two-factor.login.store'), ['recovery_code' => 'recovery-code-one'])
         ->assertRedirect($acceptUrl);
+});
+
+test('a throttled MFA code returns to the challenge with the wait instead of a bare error page', function (): void {
+    $user = User::factory()->withConfirmedMfa()->withWorkspace()->create();
+
+    $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password']);
+
+    foreach (range(1, 5) as $attempt) {
+        $this->post(route('two-factor.login.store'), ['code' => '000000']);
+    }
+
+    $this->post(route('two-factor.login.store'), ['code' => '000000'])
+        ->assertRedirect(route('two-factor.login'));
+
+    expect(session('errors')->first('code'))->toStartWith(Str::before(__('auth.throttle'), ':seconds'));
+});
+
+test('a throttled identity confirmation code returns to its form with the wait', function (): void {
+    $user = User::factory()->withConfirmedMfa()->withWorkspace()->create();
+    $this->actingAs($user);
+    AuthenticationSession::markComplete($user);
+    IdentityConfirmation::markMfaPending($user, null);
+
+    foreach (range(1, 5) as $attempt) {
+        $this->post(route('identity.confirm.mfa.store'), ['code' => '000000']);
+    }
+
+    $this->post(route('identity.confirm.mfa.store'), ['code' => '000000'])
+        ->assertRedirect(route('identity.confirm.mfa'));
+
+    expect(session('errors')->first('code'))->toStartWith(Str::before(__('auth.throttle'), ':seconds'));
 });
 
 test('the Fortify password route completes login without MFA', function (): void {

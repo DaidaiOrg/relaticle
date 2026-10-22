@@ -28,7 +28,9 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Middleware\SubstituteBindings;
@@ -251,6 +253,21 @@ return Application::configure(basePath: dirname(__DIR__))
             $lines[] = '';
 
             return response(implode("\n", $lines), 404, ['Content-Type' => 'text/markdown; charset=UTF-8']);
+        });
+
+        // An MFA code form is retried, so a throttled submit returns to it with the wait instead of a bare 429 page.
+        $exceptions->render(function (ThrottleRequestsException $e, Request $request) use ($rendersJson): ?RedirectResponse {
+            $form = match (true) {
+                $request->routeIs('two-factor.login.store') => route('two-factor.login'),
+                $request->routeIs('identity.confirm.mfa.store') => route('identity.confirm.mfa'),
+                default => null,
+            };
+
+            if ($form === null || $rendersJson($request)) {
+                return null;
+            }
+
+            return redirect()->to($form)->withErrors(['code' => __('auth.throttle', ['seconds' => $e->getHeaders()['Retry-After'] ?? 60])]);
         });
 
         // Stale tabs and deploy boundaries produce checksum failures that
