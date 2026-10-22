@@ -30,6 +30,7 @@ return [
         'resend_in' => 'Resend in :seconds seconds',
         'resend_in_one' => 'Resend in 1 second',
         'spam_hint' => 'It can take a minute to arrive. Check your spam folder too.',
+        'link_unusable' => 'That verification link no longer works for this account. Send a new one below, or sign out and open it as the right account.',
         'wrong_email' => 'Wrong email address?',
         'sign_out' => 'Sign out',
     ],

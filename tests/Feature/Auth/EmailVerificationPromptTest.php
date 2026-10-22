@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\Auth\VerifyEmail;
 use App\Providers\FortifyServiceProvider;
 use Filament\Facades\Filament;
+use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Support\Facades\Notification;
 
 mutates(FortifyServiceProvider::class);
@@ -213,7 +214,10 @@ test('an expired verification link leaves the recipient unverified', function ()
     $url = Filament::getVerifyEmailUrl($user);
     $this->travel(61)->minutes();
 
-    $this->actingAs($user)->get($url)->assertForbidden();
+    $this->actingAs($user)->get($url)
+        ->assertRedirect(Filament::getPanel('app')->getEmailVerificationPromptUrl());
+
+    FilamentNotification::assertNotified(__('auth.verify_email.link_unusable'));
 
     expect($user->refresh()->email_verified_at)->toBeNull();
 });
@@ -222,7 +226,8 @@ test('a verification link cannot verify a different signed-in user', function ()
     $recipient = User::factory()->unverified()->create();
     $otherUser = User::factory()->unverified()->create();
 
-    $this->actingAs($otherUser)->get(Filament::getVerifyEmailUrl($recipient))->assertForbidden();
+    $this->actingAs($otherUser)->get(Filament::getVerifyEmailUrl($recipient))
+        ->assertRedirect(Filament::getPanel('app')->getEmailVerificationPromptUrl());
 
     expect($recipient->refresh()->email_verified_at)->toBeNull()
         ->and($otherUser->refresh()->email_verified_at)->toBeNull();

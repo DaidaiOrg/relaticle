@@ -59,6 +59,7 @@ use Spatie\Health\Commands\ScheduleCheckHeartbeatCommand;
 use Spatie\MarkdownResponse\Actions\DetectsMarkdownRequest;
 use Spatie\MarkdownResponse\Enums\DetectionMethod;
 use Spatie\MarkdownResponse\Support\Config;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -254,6 +255,17 @@ return Application::configure(basePath: dirname(__DIR__))
             $lines[] = '';
 
             return response(implode("\n", $lines), 404, ['Content-Type' => 'text/markdown; charset=UTF-8']);
+        });
+
+        // An expired or wrong-account verification link returns to the prompt, where Resend gets a working one.
+        $exceptions->render(function (HttpException $e, Request $request): ?RedirectResponse {
+            if ($e->getStatusCode() !== 403 || ! $request->routeIs('filament.app.auth.email-verification.verify')) {
+                return null;
+            }
+
+            FilamentNotification::make()->title(__('auth.verify_email.link_unusable'))->warning()->persistent()->send();
+
+            return to_route('filament.app.auth.email-verification.prompt');
         });
 
         // Sign-in steps are retried, so a throttled one returns to its form with the wait instead of a bare 429 page.
