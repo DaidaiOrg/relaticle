@@ -98,11 +98,6 @@ test('the fortify forgot-password endpoint is not exposed', function () {
         ->assertStatus(405);
 });
 
-test('the legacy forgot-password link opens the reset request page', function () {
-    $this->get('/forgot-password')
-        ->assertRedirect(Filament::getPanel('app')->getRequestPasswordResetUrl());
-});
-
 test('password can be reset with valid token', function () {
     $user = User::factory()->withWorkspace()->create();
     $token = Password::broker('users')->createToken($user);

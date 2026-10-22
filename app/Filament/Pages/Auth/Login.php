@@ -214,16 +214,7 @@ final class Login extends \Filament\Auth\Pages\Login
         }
 
         $email = EmailAddress::canonicalize((string) $data['email']);
-
-        try {
-            $user = resolve(CreateNewUser::class)->execute($email, (string) $data['password']);
-        } catch (UniqueConstraintViolationException) {
-            $this->resetTurnstileChallenge();
-
-            throw ValidationException::withMessages([
-                'data.email' => __('validation.unique', ['attribute' => __('filament-panels::auth/pages/login.form.email.label')]),
-            ]);
-        }
+        $user = $this->createAccount($email, (string) $data['password']);
 
         $invitation = $this->getWorkspaceInvitationFromSession();
 
@@ -244,6 +235,19 @@ final class Login extends \Filament\Auth\Pages\Login
         session()->regenerate();
 
         return resolve(LoginResponse::class);
+    }
+
+    private function createAccount(string $email, #[SensitiveParameter] string $hashedPassword): User
+    {
+        try {
+            return resolve(CreateNewUser::class)->execute($email, $hashedPassword);
+        } catch (UniqueConstraintViolationException) {
+            $this->resetTurnstileChallenge();
+
+            throw ValidationException::withMessages([
+                'data.email' => __('validation.unique', ['attribute' => __('filament-panels::auth/pages/login.form.email.label')]),
+            ]);
+        }
     }
 
     private function getPasswordHelperText(): ?string
