@@ -270,6 +270,24 @@ final class CreateWorkspace extends RegisterTenant
         return ! Filament::getUserDefaultTenant($user) instanceof Workspace;
     }
 
+    private function getUserNameComponent(): TextInput
+    {
+        return TextInput::make('user_name')
+            ->label(__('filament/pages/workspaces.create_workspace.form.your_name.label'))
+            ->trim()
+            ->required()
+            ->maxLength(255)
+            ->placeholder(__('filament/pages/workspaces.create_workspace.form.your_name.placeholder'))
+            ->live(onBlur: true)
+            ->visible(fn (): bool => $this->isFirstWorkspace())
+            ->default(function (): string {
+                /** @var User $user */
+                $user = auth('web')->user();
+
+                return $user->name;
+            });
+    }
+
     /**
      * @return array<Component>
      */
@@ -279,20 +297,7 @@ final class CreateWorkspace extends RegisterTenant
             WorkspaceLogoUpload::make('logo')
                 ->label(__('filament/pages/workspaces.create_workspace.form.company_logo.label')),
 
-            TextInput::make('user_name')
-                ->label(__('filament/pages/workspaces.create_workspace.form.your_name.label'))
-                ->trim()
-                ->required()
-                ->maxLength(255)
-                ->placeholder(__('filament/pages/workspaces.create_workspace.form.your_name.placeholder'))
-                ->live(onBlur: true)
-                ->visible(fn (): bool => $this->isFirstWorkspace())
-                ->default(function (): string {
-                    /** @var User $user */
-                    $user = auth('web')->user();
-
-                    return $user->name;
-                }),
+            $this->getUserNameComponent(),
 
             TextInput::make('name')
                 ->label(__('filament/pages/workspaces.create_workspace.form.workspace_name.label'))
