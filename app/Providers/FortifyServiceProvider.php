@@ -16,7 +16,6 @@ use App\Http\Controllers\Auth\MfaChallengeController;
 use App\Http\Controllers\Auth\PasskeyConfirmationController;
 use App\Http\Controllers\Auth\PasskeySessionController;
 use App\Http\Controllers\Auth\PasswordSessionController;
-use App\Listeners\MarkTwoFactorEnrollmentCompleteListener;
 use App\Support\Auth\AuthenticationSession;
 use Filament\Facades\Filament;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -28,7 +27,6 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Events\PasswordUpdatedViaController;
-use Laravel\Fortify\Events\TwoFactorAuthenticationConfirmed;
 use Laravel\Fortify\Fortify;
 use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 use Laravel\Fortify\Http\Controllers\ConfirmablePasswordController;
@@ -72,10 +70,6 @@ final class FortifyServiceProvider extends ServiceProvider
         Fortify::verifyEmailView(fn (): RedirectResponse => to_route(
             Filament::getPanel('app')->getEmailVerificationPromptRouteName(),
         ));
-
-        // Confirming a TOTP code during enrollment is itself MFA proof for the
-        // session that just performed it, not only for logins completed afterward.
-        Event::listen(TwoFactorAuthenticationConfirmed::class, MarkTwoFactorEnrollmentCompleteListener::class);
 
         // AuthenticateSession compares this hash, so the session that changed the password stays signed in.
         Event::listen(function (PasswordUpdatedViaController $event): void {
