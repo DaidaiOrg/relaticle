@@ -33,6 +33,7 @@ use Filament\Support\Enums\Size;
 use Filament\Support\Enums\Width;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
 use Illuminate\Support\HtmlString;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
@@ -388,9 +389,7 @@ final class CreateWorkspace extends RegisterTenant
         try {
             $workspace = resolve(CreateWorkspaceAction::class)->create($user, $data, onlyIfFirst: $this->isFirstRun);
         } catch (ValidationException $exception) {
-            throw ValidationException::withMessages(
-                collect($exception->errors())->mapWithKeys(fn (array $messages, string $key): array => ["data.{$key}" => $messages])->all(),
-            );
+            throw ValidationException::withMessages(Arr::prependKeysWith($exception->errors(), 'data.'));
         }
 
         $this->updateUserNameIfChanged($user, $data);
