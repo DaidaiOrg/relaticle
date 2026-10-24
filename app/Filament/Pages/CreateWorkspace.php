@@ -359,12 +359,12 @@ final class CreateWorkspace extends RegisterTenant
         // channel that acquired them, so counting it would misattribute the
         // channel AND push signup-to-workspace above 100%. How many workspaces
         // a user owns is a question the workspaces table already answers exactly.
-        /** @var Workspace $tenant */
-        $tenant = $this->tenant;
-
-        if ($tenant->wasRecentlyCreated && $user->ownedWorkspaces()->count() === 1) {
+        if ($user->ownedWorkspaces()->count() === 1) {
             session()->put('fathom.track_workspace_created', true);
         }
+
+        /** @var Workspace $tenant */
+        $tenant = $this->tenant;
 
         // A full page load: the wizard's Alpine state does not survive a client-side hop,
         // and the torn-down component logs a burst of undefined-variable errors.
