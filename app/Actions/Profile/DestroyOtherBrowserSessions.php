@@ -13,10 +13,6 @@ final readonly class DestroyOtherBrowserSessions
 {
     public function __construct(private RevokeUserTokens $revokeUserTokens) {}
 
-    /**
-     * Only the database driver can find a user's other live sessions, so the
-     * result says whether they were ended. Identity is confirmed by the caller.
-     */
     public function execute(User $user, string $currentSessionId): bool
     {
         $this->revokeUserTokens->execute($user);
@@ -24,6 +20,7 @@ final readonly class DestroyOtherBrowserSessions
         $user->setRememberToken(Str::random(60));
         $user->save();
 
+        // Only the database driver can find the user's other live sessions. Callers confirm identity first.
         if (config('session.driver') !== 'database') {
             return false;
         }
