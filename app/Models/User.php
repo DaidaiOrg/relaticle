@@ -159,16 +159,12 @@ final class User extends Authenticatable implements FilamentUser, HasAvatar, Has
 
     public function sendEmailVerificationNotification(): void
     {
-        if ($this->verificationEmailCooldown() > 0) {
-            return;
-        }
+        RateLimiter::attempt($this->verificationEmailCooldownKey(), 1, function (): void {
+            $notification = resolve(VerifyEmail::class);
+            $notification->url = Filament::getVerifyEmailUrl($this);
 
-        $notification = resolve(VerifyEmail::class);
-        $notification->url = Filament::getVerifyEmailUrl($this);
-
-        $this->notify($notification);
-
-        RateLimiter::hit($this->verificationEmailCooldownKey(), self::VERIFICATION_EMAIL_COOLDOWN_SECONDS);
+            $this->notify($notification);
+        }, self::VERIFICATION_EMAIL_COOLDOWN_SECONDS);
     }
 
     public function verificationEmailCooldown(): int
