@@ -134,6 +134,33 @@ it('opens the first workspace instead of a second one when a first-run wizard is
         ->and($first->fresh()->personal_workspace)->toBeTrue();
 });
 
+it('keeps the first workspace logo and the user name when a stale first-run tab is submitted', function (): void {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user);
+
+    $staleTab = livewire(CreateWorkspace::class)->fillForm(['name' => 'Stale Tab Corp', 'user_name' => 'Stale Tab Name']);
+
+    livewire(CreateWorkspace::class)
+        ->fillForm([
+            'logo' => UploadedFile::fake()->image('logo.png', 200, 200),
+            'name' => 'First Tab Corp',
+            'user_name' => 'First Tab Name',
+        ])
+        ->call('register')
+        ->assertHasNoFormErrors();
+
+    $first = Workspace::query()->where('name', 'First Tab Corp')->sole();
+
+    $staleTab->call('register')
+        ->assertRedirect(SetupWorkspace::getUrl(['tenant' => $first]));
+
+    expect($first->fresh()->getFirstMedia(Workspace::LOGO_MEDIA_COLLECTION))->not->toBeNull()
+        ->and($user->fresh()->name)->toBe('First Tab Name');
+});
+
 it('leaves no half-made workspace when creating it fails after the insert', function (): void {
     $user = User::factory()->create();
 

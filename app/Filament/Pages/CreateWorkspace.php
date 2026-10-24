@@ -31,6 +31,7 @@ use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Size;
 use Filament\Support\Enums\Width;
+use Filament\Support\Exceptions\Halt;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
@@ -390,6 +391,14 @@ final class CreateWorkspace extends RegisterTenant
             $workspace = resolve(CreateWorkspaceAction::class)->create($user, $data, onlyIfFirst: $this->isFirstRun);
         } catch (ValidationException $exception) {
             throw ValidationException::withMessages(Arr::prependKeysWith($exception->errors(), 'data.'));
+        }
+
+        // Filament would save this tab's stale logo state onto the workspace another submit made.
+        if (! $workspace->wasRecentlyCreated) {
+            $this->tenant = $workspace;
+            $this->redirect(SetupWorkspace::getUrl(['tenant' => $workspace]));
+
+            throw new Halt;
         }
 
         $this->updateUserNameIfChanged($user, $data);
