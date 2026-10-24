@@ -22,11 +22,9 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Router;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
-use Laravel\Fortify\Events\PasswordUpdatedViaController;
 use Laravel\Fortify\Fortify;
 use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 use Laravel\Fortify\Http\Controllers\ConfirmablePasswordController;
@@ -70,13 +68,6 @@ final class FortifyServiceProvider extends ServiceProvider
         Fortify::verifyEmailView(fn (): RedirectResponse => to_route(
             Filament::getPanel('app')->getEmailVerificationPromptRouteName(),
         ));
-
-        // AuthenticateSession compares this hash, so the session that changed the password stays signed in.
-        Event::listen(function (PasswordUpdatedViaController $event): void {
-            if (request()->hasSession()) {
-                request()->session()->put('password_hash_'.auth()->getDefaultDriver(), $event->user->getAuthPassword());
-            }
-        });
 
         RateLimiter::for('login', function (Request $request): Limit {
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
