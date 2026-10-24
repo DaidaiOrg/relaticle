@@ -177,6 +177,21 @@ it('leaves no half-made workspace when creating it fails after the insert', func
         ->and($user->fresh()->current_workspace_id)->toBeNull();
 });
 
+it('leaves no workspace behind when a step after the insert fails', function (): void {
+    $user = User::factory()->create();
+
+    $this->actingAs($user);
+
+    User::updating(fn (): never => throw new RuntimeException('switch failed'));
+
+    expect(fn () => livewire(CreateWorkspace::class)
+        ->fillForm(['name' => 'Unswitched Corp'])
+        ->call('register'))
+        ->toThrow(RuntimeException::class);
+
+    expect(Workspace::query()->where('name', 'Unswitched Corp')->exists())->toBeFalse();
+});
+
 it('reports a handle taken by the time the workspace is saved on the handle field', function (): void {
     $user = User::factory()->create();
     $other = User::factory()->withPersonalWorkspace()->create();
