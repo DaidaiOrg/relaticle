@@ -210,9 +210,13 @@ final class User extends Authenticatable implements FilamentUser, HasAvatar, Has
 
     public function availableSocialAccount(): ?UserSocialAccount
     {
-        return $this->socialAccounts()
-            ->get()
-            ->first(fn (UserSocialAccount $account): bool => SocialiteProvider::tryFrom($account->provider_name)?->isAvailable() ?? false);
+        $availableProviders = array_filter(SocialiteProvider::cases(), fn (SocialiteProvider $provider): bool => $provider->isAvailable());
+
+        if ($availableProviders === []) {
+            return null;
+        }
+
+        return $this->socialAccounts()->whereIn('provider_name', $availableProviders)->first();
     }
 
     public function hasPassword(): bool
