@@ -78,7 +78,7 @@ final readonly class CreateWorkspace implements CreatesTeams
         try {
             DB::transaction(fn (): Model|false => $user->ownedWorkspaces()->save($workspace));
         } catch (UniqueConstraintViolationException $exception) {
-            throw_unless(str_contains($exception->getMessage(), 'workspaces_slug_unique'), $exception);
+            throw_unless($exception->index === 'workspaces_slug_unique', $exception);
 
             throw ValidationException::withMessages([
                 'slug' => __('validation.unique', ['attribute' => __('filament/pages/workspaces.create_workspace.form.workspace_handle.label')]),
