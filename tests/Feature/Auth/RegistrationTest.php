@@ -36,6 +36,19 @@ it('names a user who signs up with a plus address without the tag', function ():
     expect(User::query()->where('email', $email)->sole()->name)->toBe('Jane Doe');
 });
 
+it('names a user whose address starts with a plus tag after the whole local part', function (): void {
+    $email = '+trial'.uniqid().'@gmail.com';
+
+    livewire(Login::class)
+        ->fillForm(['email' => $email])
+        ->call('authenticate')
+        ->fillForm(['password' => 'Password123!'])
+        ->call('authenticate')
+        ->assertHasNoFormErrors();
+
+    expect(User::query()->where('email', $email)->sole()->name)->toStartWith('+Trial');
+});
+
 it('throttles repeated signup submissions on one discovery', function (): void {
     $component = livewire(Login::class)
         ->fillForm(['email' => 'throttle-'.uniqid().'@gmail.com'])

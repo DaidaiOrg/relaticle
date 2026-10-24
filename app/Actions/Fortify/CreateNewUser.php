@@ -20,8 +20,9 @@ final readonly class CreateNewUser
 
     private function guessNameFromEmail(string $email): string
     {
-        $localPart = Str::before(Str::before($email, '@'), '+');
+        $localPart = Str::before($email, '@');
+        $untaggedPart = Str::before($localPart, '+');
 
-        return Str::title(str_replace(['.', '_'], ' ', $localPart));
+        return Str::title(str_replace(['.', '_'], ' ', $untaggedPart === '' ? $localPart : $untaggedPart));
     }
 }
