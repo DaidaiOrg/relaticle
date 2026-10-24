@@ -141,7 +141,7 @@ final class CreateWorkspace extends RegisterTenant
             ->components([
                 Wizard::make([
                     $this->getWorkspaceStep(),
-                    ...($this->ownsNoWorkspace() ? [$this->getAttributionStep()] : []),
+                    ...($this->isFirstRun ? [$this->getAttributionStep()] : []),
                 ])
                     ->view('components.onboarding.wizard')
                     ->hiddenHeader()
