@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\CallbackController;
 use App\Http\Controllers\Auth\LinkSocialAccountCallbackController;
 use App\Http\Controllers\Auth\LinkSocialAccountRedirectController;
 use App\Http\Controllers\Auth\RedirectController;
+use App\Http\Middleware\EnsureSocialiteProviderIsAvailable;
 use App\Models\User;
 use App\Models\UserSocialAccount;
 use App\Support\Auth\AuthenticationSession;
@@ -32,6 +33,7 @@ mutates(
     LinkSocialAccount::class,
     LinkSocialAccountRedirectController::class,
     LinkSocialAccountCallbackController::class,
+    EnsureSocialiteProviderIsAvailable::class,
 );
 
 function makeSocialiteUser(string $id, string $name, ?string $email, bool $emailVerified = true): SocialiteUser
@@ -391,6 +393,13 @@ test('github callback route is gone', function () {
 
 test('callback rejects unknown providers', function () {
     $this->get('/auth/callback/bitbucket?code=x')->assertNotFound();
+});
+
+test('a provider without a client id has no sign-in routes', function (): void {
+    config(['services.microsoft.client_id' => null]);
+
+    $this->get('/auth/redirect/microsoft')->assertNotFound();
+    $this->get('/auth/callback/microsoft?code=x')->assertNotFound();
 });
 
 test('link redirect requires a fresh identity confirmation', function (): void {
