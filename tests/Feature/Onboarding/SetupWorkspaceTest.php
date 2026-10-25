@@ -249,6 +249,17 @@ it('clears the required error once the owner picks a use case', function (): voi
         ->assertHasNoFormErrors(['onboarding_use_case']);
 });
 
+it('clears the required details error once the owner picks a detail', function (): void {
+    workspaceInSetup(User::factory()->create());
+
+    livewire(SetupWorkspace::class)
+        ->fillForm(['onboarding_use_case' => OnboardingUseCase::Recruiting->value])
+        ->call('saveUseCase')
+        ->assertHasFormErrors(['onboarding_context' => 'required'])
+        ->fillForm(['onboarding_context' => ['sourcing']])
+        ->assertHasNoFormErrors(['onboarding_context']);
+});
+
 it('gives the use case button its own loading target', function (): void {
     workspaceInSetup(User::factory()->create());
 

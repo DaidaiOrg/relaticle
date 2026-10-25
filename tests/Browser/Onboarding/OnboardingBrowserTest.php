@@ -285,6 +285,24 @@ it('stores the use case and its sub-option chosen in the browser', function (): 
         ->and($workspace->name)->toBe('Hiring Desk');
 });
 
+it('clears the required details error as soon as a detail is ticked', function (): void {
+    $user = User::factory()->create();
+
+    walkToMailboxStep($user, 'Hiring Desk', 'hiring-desk')
+        ->assertScript(ACTION_MODALS_READY, true)
+        ->press("I'll add people and companies myself")
+        ->waitForText('Continue without your mailbox?')
+        ->press('button:visible:has-text("Yes, I\'m sure")')
+        ->waitForText('Help us customize your workspace')
+        ->assertScript(asyncAlpineComponentsLoaded())
+        ->click('[id$="onboarding_use_case-recruiting"]')
+        ->waitForText('Pick what applies to you.')
+        ->press('button:visible:has-text("Continue")')
+        ->waitForText('The use case details field is required.')
+        ->click('[for$="onboarding_context-sourcing"]')
+        ->assertScript('new Promise(resolve => { const end = Date.now() + 3000; const poll = () => { const shown = document.body.innerText.includes("The use case details field is required."); shown && Date.now() < end ? setTimeout(poll, 50) : resolve(shown); }; poll(); })', false);
+});
+
 it('stores the assistant and the question behind an AI referral picked in the browser', function (): void {
     Queue::fake();
 

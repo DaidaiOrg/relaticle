@@ -62,6 +62,10 @@ trait RunsUseCaseStep
             ->options($subOptions)
             ->inline()
             ->multiple()
+            ->live()
+            ->afterStateUpdated(function (): void {
+                $this->resetErrorBag('data.onboarding_context');
+            })
             ->visible(fn (Get $get): bool => $subOptions($get) !== []);
     }
 
