@@ -41,6 +41,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Laravel\Cashier\Http\Middleware\VerifyWebhookSignature;
+use Laravel\Fortify\Fortify;
 use Laravel\Pennant\Feature;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use Livewire\Exceptions\MethodNotFoundException;
@@ -268,7 +269,7 @@ return Application::configure(basePath: dirname(__DIR__))
             return to_route('filament.app.auth.email-verification.prompt');
         });
 
-        // Sign-in steps are retried, so a throttled one returns to its form with the wait instead of a bare 429 page.
+        // Sign-in and provider steps are retried, so a throttled one goes back with the wait instead of a bare 429 page.
         $exceptions->render(function (ThrottleRequestsException $e, Request $request) use ($rendersJson): ?RedirectResponse {
             if ($rendersJson($request)) {
                 return null;
@@ -276,10 +277,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
             $wait = __('auth.throttle', ['seconds' => $e->getHeaders()['Retry-After'] ?? 60]);
 
-            if ($request->routeIs('auth.socialite.redirect', 'auth.socialite.callback')) {
+            if ($request->routeIs('auth.socialite.*')) {
                 FilamentNotification::make()->title(__('auth.provider.failed_title'))->body($wait)->danger()->persistent()->send();
 
-                return to_route('login');
+                return $request->user() === null
+                    ? to_route('login')
+                    : redirect()->intended(Fortify::redirects('password-confirmation'));
             }
 
             $form = match (true) {

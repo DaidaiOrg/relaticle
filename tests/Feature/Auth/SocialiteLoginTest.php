@@ -6,6 +6,7 @@ use App\Actions\Auth\LinkSocialAccount;
 use App\Enums\AuthMethod;
 use App\Enums\SocialiteProvider;
 use App\Filament\Pages\Dashboard;
+use App\Filament\Pages\Security;
 use App\Http\Controllers\Auth\CallbackController;
 use App\Http\Controllers\Auth\LinkSocialAccountCallbackController;
 use App\Http\Controllers\Auth\LinkSocialAccountRedirectController;
@@ -265,6 +266,31 @@ test('a throttled social callback returns to the sign-in page instead of a bare 
             ->persistent(),
     );
 });
+
+test('a throttled provider step returns a signed-in user to the page that started it', function (string $routeName) {
+    $this->freezeTime();
+
+    $user = User::factory()->withPersonalWorkspace()->create();
+    $startedOn = Security::getUrl(tenant: $user->personalWorkspace());
+
+    $this->actingAs($user);
+
+    foreach (range(1, 10) as $attempt) {
+        $this->get(route($routeName, ['provider' => SocialiteProvider::GOOGLE->value]));
+    }
+
+    $this->withSession(['url.intended' => $startedOn])
+        ->get(route($routeName, ['provider' => SocialiteProvider::GOOGLE->value]))
+        ->assertRedirect($startedOn);
+
+    FilamentNotification::assertNotified(
+        FilamentNotification::make()
+            ->title(__('auth.provider.failed_title'))
+            ->body(__('auth.throttle', ['seconds' => 60]))
+            ->danger()
+            ->persistent(),
+    );
+})->with(['identity confirmation' => 'auth.socialite.confirm.callback', 'account link' => 'auth.socialite.link.callback']);
 
 test('callback from socialite provider rejects a disposable email address', function () {
     Exceptions::fake();
