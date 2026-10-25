@@ -418,6 +418,18 @@ it('shows enterprise manual state without upgrade actions', function (): void {
         ->assertDontSee(__('billing.upgrade.button'));
 });
 
+it('shows Concierge as a managed plan with its allowance and no upgrade actions', function (): void {
+    [, $workspace] = billingPageOwner();
+    $workspace->forceFill(['plan' => Plan::Concierge])->save();
+
+    livewire(Billing::class)
+        ->assertSee(__('billing.plans.cloud_concierge'))
+        ->assertSee(__('billing.managed.title'))
+        ->assertSee('/ '.number_format(Plan::Concierge->credits()))
+        ->assertDontSee(__('billing.plans.cloud_pro'))
+        ->assertDontSee(__('billing.upgrade.button'));
+});
+
 it('renders read-only info for members', function (): void {
     config()->set('services.stripe.credit_packs.small', ['price' => 'price_credits_1k_test', 'credits' => 1000]);
     [, $workspace] = billingPageOwner();
@@ -599,7 +611,7 @@ it('keeps Enterprise access clear while an older Pro subscription is canceling',
 
     livewire(Billing::class)
         ->assertSee(__('billing.status.managed'))
-        ->assertSee('Your Enterprise access is unchanged.')
+        ->assertSee('Your current plan is unchanged.')
         ->assertDontSee('After that, workspace access pauses.')
         ->assertDontSee(__('billing.trial.active_title'));
 });

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Enums\Notifications\NotificationReason;
-use App\Enums\Plan;
 use App\Filament\Pages\Billing;
 use App\Models\Notification as NotificationRow;
 use App\Models\Workspace;
@@ -47,7 +46,7 @@ final class PaymentFailedNotification extends InboxNotification
     {
         return [
             'workspace_id' => $this->workspace->getKey(),
-            'enterprise' => $this->workspace->plan === Plan::Enterprise,
+            'managed' => $this->workspace->plan->isManaged(),
         ];
     }
 
@@ -57,8 +56,8 @@ final class PaymentFailedNotification extends InboxNotification
 
         return FilamentNotification::make((string) $row->getKey())
             ->title(__('billing.payment_failed.notification_title', ['workspace' => $workspace->name ?? '']))
-            ->body(data_get($row->data, 'enterprise') === true
-                ? __('billing.enterprise.previous_subscription_past_due')
+            ->body(data_get($row->data, 'managed') === true || data_get($row->data, 'enterprise') === true
+                ? __('billing.managed.previous_subscription_past_due')
                 : __('billing.payment_failed.notification_body'))
             ->icon(Heroicon::OutlinedExclamationTriangle)
             ->iconColor('danger')

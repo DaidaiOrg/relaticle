@@ -41,14 +41,14 @@ it('shows the pro tier when billing is on', function (): void {
         ->assertDontSee('Generous free tier');
 });
 
-it('keeps self-hosting separate from the two paid plan choices', function (): void {
+it('keeps self-hosting separate from the three paid plan choices', function (): void {
     Feature::define(BillingFeature::class, true);
 
     $response = $this->get('/pricing');
     $crawler = new Crawler((string) $response->getContent());
 
     expect($crawler->filter('#pricing-plans h2')->each(fn (Crawler $heading): string => trim($heading->text())))
-        ->toBe(['Cloud Pro', 'Enterprise'])
+        ->toBe(['Cloud Pro', 'Cloud Concierge', 'Enterprise'])
         ->and($crawler->filter('#self-hosting a')->attr('href'))->toBe(route('selfHosted'));
 });
 
@@ -199,6 +199,28 @@ it('keeps the Enterprise starting price consistent with its annual structured of
         ->and($offer['priceSpecification']['minPrice'])->toBe(25_000)
         ->and($offer['priceSpecification']['unitText'])->toBe('year')
         ->and($offer['url'])->toBe(route('contact', ['plan' => 'enterprise']));
+});
+
+it('sells Cloud Concierge through a sales inquiry at its yearly price', function (): void {
+    Feature::define(BillingFeature::class, true);
+    config(['relaticle.concierge.price_yearly' => 1_200]);
+
+    $response = $this->get('/pricing')->assertOk();
+    $crawler = new Crawler((string) $response->getContent());
+    $card = $crawler->filter('#concierge-plan');
+
+    expect($card->filter('a')->attr('href'))->toBe(route('contact', ['plan' => 'concierge']))
+        ->and($card->text())->toContain('$100')
+        ->toContain('$1,200 billed yearly')
+        ->toContain(number_format(Plan::Concierge->credits()).' AI credits / month')
+        ->toContain('Setup starts once the invoice is paid.');
+
+    $graph = json_decode($crawler->filter('script[type="application/ld+json"]')->text(), true, 512, JSON_THROW_ON_ERROR);
+    $offer = collect(collect($graph['@graph'])->firstWhere('@type', 'Product')['offers'])->firstWhere('name', 'Cloud Concierge');
+
+    expect($offer['priceSpecification']['price'])->toBe(1_200)
+        ->and($offer['priceSpecification']['unitText'])->toBe('year')
+        ->and($offer['url'])->toBe(route('contact', ['plan' => 'concierge']));
 });
 
 it('emits accurate product json-ld offers when billing is off', function (): void {
@@ -501,6 +523,7 @@ it('keeps the credits help article in step with each plan allowance', function (
 
     expect($rows->all())->toBe([
         'Cloud Pro and its trial' => ['Cloud Pro and its trial', number_format(Plan::Pro->credits()), (string) Plan::Pro->rateLimit()],
+        'Cloud Concierge' => ['Cloud Concierge', number_format(Plan::Concierge->credits()), (string) Plan::Concierge->rateLimit()],
         'Enterprise' => ['Enterprise', 'Agreed with your team', 'Agreed with your team'],
         'Self-hosted (default)' => ['Self-hosted (default)', number_format(Plan::default()->credits()), (string) Plan::default()->rateLimit()],
     ]);

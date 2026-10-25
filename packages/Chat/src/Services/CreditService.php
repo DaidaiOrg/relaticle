@@ -472,7 +472,7 @@ final readonly class CreditService
     {
         $workspace->loadMissing('subscriptions');
 
-        if ($workspace->plan !== Plan::Enterprise && $workspace->subscription()?->pastDue() === true) {
+        if (! $workspace->plan->isManaged() && $workspace->subscription()?->pastDue() === true) {
             return Plan::Free->credits();
         }
 

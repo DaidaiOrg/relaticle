@@ -294,6 +294,17 @@ it('fails the webhook so Stripe retries when the latest subscription cannot be f
     expect(Subscription::query()->where('stripe_id', 'sub_test_1')->value('stripe_price'))->toBe('price_pro_monthly_test');
 });
 
+it('preserves a Concierge grant when an older Pro subscription sends an update', function (): void {
+    $workspace = stripeBillingWorkspace();
+
+    sendStripeWebhook(stripeSubscriptionEvent($workspace, 'created'))->assertSuccessful();
+    $workspace->forceFill(['plan' => Plan::Concierge])->save();
+
+    sendStripeWebhook(stripeSubscriptionEvent($workspace, 'updated', ['cancel_at_period_end' => true]))->assertSuccessful();
+
+    expect($workspace->refresh()->plan)->toBe(Plan::Concierge);
+});
+
 it('leaves the plan untouched for a price that maps to no plan', function (): void {
     $workspace = stripeBillingWorkspace();
 
@@ -548,16 +559,28 @@ it('notifies the workspace owner when a renewal charge fails', function (): void
         ->and($notification->getActions()[0]->getUrl())->toBe(Billing::getUrl(panel: 'app', tenant: $workspace));
 });
 
-it('keeps Enterprise access clear in an older subscription payment notification', function (): void {
+it('keeps a managed plan clear in an older subscription payment notification', function (Plan $plan): void {
     $workspace = stripeBillingWorkspace();
-    $workspace->forceFill(['plan' => Plan::Enterprise])->save();
+    $workspace->forceFill(['plan' => $plan])->save();
 
     sendStripeWebhook(invoicePaymentFailedEvent($workspace))->assertOk();
 
     $notification = PaymentFailedNotification::present($workspace->owner->notifications()->sole());
 
-    expect($notification->getBody())->toContain('Your Enterprise access is unchanged.')
+    expect($notification->getBody())->toContain('Your current plan is unchanged.')
         ->not->toContain('to keep Pro');
+})->with([Plan::Enterprise, Plan::Concierge]);
+
+it('still reads an Enterprise payment notification stored under the earlier key', function (): void {
+    $workspace = stripeBillingWorkspace();
+    $workspace->forceFill(['plan' => Plan::Enterprise])->save();
+
+    sendStripeWebhook(invoicePaymentFailedEvent($workspace))->assertOk();
+
+    $row = $workspace->owner->notifications()->sole();
+    $row->forceFill(['data' => collect($row->data)->except('managed')->put('enterprise', true)->all()])->save();
+
+    expect(PaymentFailedNotification::present($row->fresh())->getBody())->toContain('Your current plan is unchanged.');
 });
 
 it('notifies once per invoice, not once per Stripe retry attempt', function (): void {

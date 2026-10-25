@@ -1,5 +1,7 @@
 @php
     $billingActive = \Laravel\Pennant\Feature::active(\App\Features\Billing::class);
+    $conciergePrice = number_format(config('relaticle.concierge.price_yearly'));
+    $conciergeCredits = number_format(\App\Enums\Plan::Concierge->credits());
     $enterprisePrice = number_format(config('relaticle.enterprise.starting_price_yearly'));
 @endphp
 
@@ -30,12 +32,12 @@
             </h1>
             <p class="mx-auto mt-5 max-w-2xl text-balance text-base leading-relaxed text-gray-500 dark:text-gray-400 md:text-lg">
                 {{ $billingActive
-                    ? __('Unlimited users and records on every plan. Start with Cloud Pro, or work with us on a tailored implementation.')
+                    ? __('Unlimited users and records on every plan. Run it yourself, or let us set it up for you.')
                     : __('Unlimited users. Unlimited records. Self-host for free, or let us run it for you.') }}
             </p>
         </div>
 
-        <div class="relative mx-auto mt-12 max-w-4xl px-6 lg:px-8">
+        <div class="relative mx-auto mt-12 max-w-6xl px-6 lg:px-8">
             @php
                 $freeCredits = number_format(\App\Enums\Plan::Free->credits());
                 $proCredits = number_format(\App\Enums\Plan::Pro->credits());
@@ -139,37 +141,39 @@
     </section>
 
     <section class="bg-gray-50 py-20 dark:bg-gray-950 md:py-28">
-        <div class="mx-auto max-w-4xl px-6 lg:px-8">
+        <div class="mx-auto max-w-5xl px-6 lg:px-8">
             @if($billingActive)
                 <div class="mx-auto mb-12 max-w-2xl text-center">
                     <h2 class="font-display text-2xl font-bold tracking-[-0.02em] text-gray-950 dark:text-white sm:text-3xl">{{ __('Choose how you get started') }}</h2>
                     <p class="mt-4 text-base leading-relaxed text-gray-500 dark:text-gray-400">{{ __('The same CRM at the core. A different level of help around it.') }}</p>
                 </div>
-                <div class="overflow-hidden rounded-2xl border border-gray-200/80 bg-white dark:border-white/[0.06] dark:bg-white/[0.02]" role="region" aria-label="{{ __('Compare Cloud Pro and Enterprise') }}">
+                <div class="overflow-hidden rounded-2xl border border-gray-200/80 bg-white dark:border-white/[0.06] dark:bg-white/[0.02]" role="region" aria-label="{{ __('Compare Cloud Pro, Cloud Concierge and Enterprise') }}">
                     <table class="w-full text-left text-sm">
-                        <caption class="sr-only">{{ __('Compare Cloud Pro and Enterprise') }}</caption>
+                        <caption class="sr-only">{{ __('Compare Cloud Pro, Cloud Concierge and Enterprise') }}</caption>
                         <thead class="hidden border-b border-gray-100 dark:border-white/[0.06] sm:table-header-group">
                             <tr>
-                                <th scope="col" class="w-[30%] px-5 py-4 text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('What’s included') }}</th>
-                                <th scope="col" class="w-[35%] bg-primary/[0.04] px-5 py-4 font-semibold text-primary-700 dark:bg-primary/[0.08] dark:text-primary-300">{{ __('billing.plans.cloud_pro') }}</th>
-                                <th scope="col" class="w-[35%] px-5 py-4 font-semibold text-gray-950 dark:text-white">{{ __('billing.plans.enterprise') }}</th>
+                                <th scope="col" class="w-[28%] px-5 py-4 text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('What’s included') }}</th>
+                                <th scope="col" class="w-[24%] bg-primary/[0.04] px-5 py-4 font-semibold text-primary-700 dark:bg-primary/[0.08] dark:text-primary-300">{{ __('billing.plans.cloud_pro') }}</th>
+                                <th scope="col" class="w-[24%] px-5 py-4 font-semibold text-gray-950 dark:text-white">{{ __('billing.plans.cloud_concierge') }}</th>
+                                <th scope="col" class="w-[24%] px-5 py-4 font-semibold text-gray-950 dark:text-white">{{ __('billing.plans.enterprise') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-white/[0.06]">
                             @foreach(array_filter([
-                                [__('Users and records'), __('Unlimited'), __('Unlimited')],
-                                [__(':name, the AI assistant', ['name' => config('chat.assistant_name')]), __('2,000 credits each month'), __('Usage agreed with your team')],
+                                [__('Users and records'), __('Unlimited'), __('Unlimited'), __('Unlimited')],
+                                [__(':name, the AI assistant', ['name' => config('chat.assistant_name')]), __('2,000 credits each month'), __(':credits credits each month', ['credits' => $conciergeCredits]), __('Usage agreed with your team')],
                                 \Laravel\Pennant\Feature::active(\App\Features\EmailIntegration::class)
-                                    ? [__('Email and calendar'), __('Gmail and Outlook sync'), __('Gmail and Outlook sync')]
+                                    ? [__('Email and calendar'), __('Gmail and Outlook sync'), __('Gmail and Outlook sync'), __('Gmail and Outlook sync')]
                                     : null,
-                                [__('Getting started'), __('Self-service setup'), __('Scoped implementation project')],
-                                [__('billing.comparison.integrations'), __('REST API and MCP server'), __('Custom integrations by agreement')],
-                                [__('Hosting and updates'), __('Managed by Relaticle'), __('Agreed deployment and maintenance')],
-                                [__('billing.comparison.support'), __('Email support'), __('Agreed support with the founding team')],
-                            ]) as [$feature, $pro, $enterprise])
+                                [__('Getting started'), __('Self-service setup'), __('Set up for you'), __('Scoped implementation project')],
+                                [__('billing.comparison.integrations'), __('REST API and MCP server'), __('REST API and MCP server'), __('Custom integrations by agreement')],
+                                [__('Hosting and updates'), __('Managed by Relaticle'), __('Managed by Relaticle'), __('Agreed deployment and maintenance')],
+                                [__('billing.comparison.support'), __('Email support'), __('Changes within one business day'), __('Agreed support with the founding team')],
+                            ]) as [$feature, $pro, $concierge, $enterprise])
                                 <tr class="block px-5 py-4 sm:table-row sm:p-0">
                                     <th scope="row" class="block pb-2 text-left font-semibold text-gray-900 dark:text-white sm:table-cell sm:px-5 sm:py-4 sm:align-top sm:font-medium">{{ $feature }}</th>
                                     <td data-label="{{ __('billing.plans.cloud_pro') }}:" class="block py-0.5 text-gray-600 before:mr-1.5 before:font-medium before:text-primary-700 before:content-[attr(data-label)] dark:text-gray-400 dark:before:text-primary-300 sm:table-cell sm:bg-primary/[0.04] sm:px-5 sm:py-4 sm:align-top sm:before:content-none dark:sm:bg-primary/[0.08]">{{ $pro }}</td>
+                                    <td data-label="{{ __('billing.plans.cloud_concierge') }}:" class="block py-0.5 text-gray-600 before:mr-1.5 before:font-medium before:text-gray-900 before:content-[attr(data-label)] dark:text-gray-400 dark:before:text-white sm:table-cell sm:px-5 sm:py-4 sm:align-top sm:before:content-none">{{ $concierge }}</td>
                                     <td data-label="{{ __('billing.plans.enterprise') }}:" class="block py-0.5 text-gray-600 before:mr-1.5 before:font-medium before:text-gray-900 before:content-[attr(data-label)] dark:text-gray-400 dark:before:text-white sm:table-cell sm:px-5 sm:py-4 sm:align-top sm:before:content-none">{{ $enterprise }}</td>
                                 </tr>
                             @endforeach
@@ -255,6 +259,8 @@
                 ];
 
                 if ($billingActive) {
+                    $pricingFaqs[] = [__('billing.concierge.faq_title'), __('billing.concierge.faq_body', ['credits' => $conciergeCredits, 'pro_credits' => $proCredits, 'price' => $conciergePrice])];
+                    $pricingFaqs[] = [__('billing.concierge.change_title'), __('billing.concierge.change_body')];
                     $pricingFaqs[] = [__('billing.enterprise.faq_title'), __('billing.enterprise.faq_body', ['price' => $enterprisePrice])];
                     $pricingFaqs[] = [__('billing.enterprise.timeline_title'), __('billing.enterprise.timeline_body')];
                 }
@@ -326,6 +332,14 @@
                             ->availability(\Spatie\SchemaOrg\ItemAvailability::InStock)
                             ->url(route('pricing'))
                             ->description('Per workspace, billed yearly at $228/year ($19/mo); $24/mo billed monthly.'),
+                        \Spatie\SchemaOrg\Schema::offer()
+                            ->name('Cloud Concierge')
+                            ->priceSpecification(\Spatie\SchemaOrg\Schema::unitPriceSpecification()
+                                ->price(config('relaticle.concierge.price_yearly'))
+                                ->priceCurrency('USD')
+                                ->unitText('year'))
+                            ->url(route('contact', ['plan' => 'concierge']))
+                            ->description(__('billing.concierge.faq_body', ['credits' => $conciergeCredits, 'pro_credits' => number_format(\App\Enums\Plan::Pro->credits()), 'price' => $conciergePrice])),
                         \Spatie\SchemaOrg\Schema::offer()
                             ->name('Enterprise')
                             ->priceSpecification(\Spatie\SchemaOrg\Schema::unitPriceSpecification()

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\Plan;
 use App\Features\Billing;
 use App\Http\Requests\ContactRequest;
 use App\Mail\NewContactSubmissionMail;
@@ -17,8 +18,10 @@ final readonly class ContactController
 {
     public function show(Request $request): View
     {
+        $plan = Plan::tryFrom($request->string('plan')->toString());
+
         return view('contact', [
-            'enterpriseInquiry' => $request->query('plan') === 'enterprise' && Feature::active(Billing::class),
+            'inquiryPlan' => $plan?->isManaged() === true && Feature::active(Billing::class) ? $plan : null,
         ]);
     }
 

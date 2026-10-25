@@ -108,6 +108,14 @@ final class BillingStatusFixture
                 fn (Workspace $workspace) => $workspace->forceFill(['plan' => Plan::Enterprise])->save(),
                 BillingStatus::Enterprise,
             ],
+            'a concierge workspace reads Concierge' => [
+                fn (Workspace $workspace) => $workspace->forceFill(['plan' => Plan::Concierge])->save(),
+                BillingStatus::Concierge,
+            ],
+            'a concierge grant past an old trial date reads Concierge, not Trial ended' => [
+                fn (Workspace $workspace) => $workspace->forceFill(['plan' => Plan::Concierge, 'trial_ends_at' => now()->subHour()])->save(),
+                BillingStatus::Concierge,
+            ],
             'a pre-billing workspace reads Free (legacy)' => [
                 fn (Workspace $workspace) => $workspace->forceFill(['hosted_free_grandfathered_at' => now()])->save(),
                 BillingStatus::Grandfathered,
