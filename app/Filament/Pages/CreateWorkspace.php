@@ -84,6 +84,21 @@ final class CreateWorkspace extends RegisterTenant
     }
 
     #[Override]
+    public function hydrate(): void
+    {
+        if (self::canView()) {
+            return;
+        }
+
+        // A first-run tab reaches the cap through the workspace another tab made, and register() opens it.
+        $workspace = $this->isFirstRun ? $this->firstOwnedWorkspace() : null;
+
+        abort_unless($workspace instanceof Workspace, 404);
+
+        $this->tenant = $workspace;
+    }
+
+    #[Override]
     public function register(): void
     {
         if ($this->tenant instanceof Workspace) {
@@ -254,6 +269,14 @@ final class CreateWorkspace extends RegisterTenant
         $slug = $get('slug');
 
         return blank($slug) || $slug === $get('slug_derived');
+    }
+
+    private function firstOwnedWorkspace(): ?Workspace
+    {
+        /** @var User $user */
+        $user = auth('web')->user();
+
+        return $user->ownedWorkspaces()->oldest()->first();
     }
 
     private function ownsNoWorkspace(): bool

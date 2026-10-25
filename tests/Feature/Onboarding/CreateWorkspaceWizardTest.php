@@ -1027,6 +1027,28 @@ it('still creates the workspace when its setup conversation appears between the 
         ->and($workspace->setupConversation()->count())->toBe(1);
 });
 
+it('opens the first workspace when a first-run tab is submitted at a cap of one', function (): void {
+    config(['relaticle.workspaces.max_owned_per_user' => 1]);
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user);
+
+    $staleTab = livewire(CreateWorkspace::class)->fillForm(['name' => 'Capped Stale Corp']);
+
+    livewire(CreateWorkspace::class)
+        ->fillForm(['name' => 'Capped First Corp'])
+        ->call('register')
+        ->assertHasNoFormErrors();
+
+    $first = Workspace::query()->where('name', 'Capped First Corp')->sole();
+
+    $staleTab->call('register')
+        ->assertRedirect(SetupWorkspace::getUrl(['tenant' => $first]));
+
+    expect($user->ownedWorkspaces()->count())->toBe(1);
+});
+
 it('redirects a first workspace to its setup page when the setup conversation is off', function (): void {
     Feature::define(SetupConversation::class, false);
 
