@@ -35,6 +35,7 @@ use Laravel\Passkeys\Passkey;
 use Laravel\Passkeys\Passkeys;
 use Laravel\Pennant\Feature;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
+use Symfony\Component\DomCrawler\Crawler;
 use Tests\Helpers\PasskeyAssertionFixture;
 
 mutates(CancelAuthentication::class, Login::class, PasswordSessionController::class, MfaChallengeController::class);
@@ -331,6 +332,12 @@ test('password login rejects an external destination for an account without a wo
 test('login email field has autocomplete=username webauthn for conditional mediation', function (): void {
     livewire(Login::class)
         ->assertSeeHtml('autocomplete="username webauthn"');
+});
+
+test('the sign-in page names its logo link for screen readers', function (): void {
+    $page = new Crawler($this->get(route('filament.app.auth.login'))->assertSuccessful()->getContent());
+
+    expect($page->filter('header a[href="'.url('/').'"]')->attr('aria-label'))->toBe(config('app.name'));
 });
 
 test('the passkey login endpoint is rate limited', function (): void {
