@@ -9,7 +9,6 @@ use App\Data\NotificationPreferences;
 use App\Enums\EmailGrant;
 use App\Enums\Notifications\NotificationChannel;
 use App\Enums\Notifications\NotificationType;
-use App\Enums\SocialiteProvider;
 use App\Enums\WorkspaceCapability;
 use App\Enums\WorkspaceRole;
 use App\Jobs\PurgeUser;
@@ -206,13 +205,7 @@ final class User extends Authenticatable implements FilamentUser, HasAvatar, Has
 
     public function availableSocialAccount(): ?UserSocialAccount
     {
-        $availableProviders = array_filter(SocialiteProvider::cases(), fn (SocialiteProvider $provider): bool => $provider->isAvailable());
-
-        if ($availableProviders === []) {
-            return null;
-        }
-
-        return $this->socialAccounts()->whereIn('provider_name', $availableProviders)->first();
+        return $this->socialAccounts()->available()->first();
     }
 
     public function hasPassword(): bool

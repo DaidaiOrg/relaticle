@@ -22,6 +22,12 @@ enum SocialiteProvider: string
         };
     }
 
+    /** @return list<self> */
+    public static function available(): array
+    {
+        return array_values(array_filter(self::cases(), fn (self $provider): bool => $provider->isAvailable()));
+    }
+
     public function isAvailable(): bool
     {
         return Feature::for(null)->active(SocialAuth::class)

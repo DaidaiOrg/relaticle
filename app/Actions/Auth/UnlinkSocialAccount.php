@@ -27,7 +27,7 @@ final readonly class UnlinkSocialAccount
 
             $remainingMethods = ($lockedUser->hasPassword() ? 1 : 0)
                 + ($lockedUser->hasPasskey() ? 1 : 0)
-                + $lockedUser->socialAccounts()->whereKeyNot($account->getKey())->count();
+                + $lockedUser->socialAccounts()->available()->whereKeyNot($account->getKey())->count();
 
             if ($remainingMethods < 1) {
                 throw ValidationException::withMessages([
