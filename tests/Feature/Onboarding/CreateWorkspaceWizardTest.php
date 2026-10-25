@@ -16,11 +16,14 @@ use App\Filament\Pages\SetupWorkspace;
 use App\Models\User;
 use App\Models\Workspace;
 use Filament\Schemas\Components\Wizard;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Pennant\Feature;
+use Relaticle\Chat\Models\AgentConversation;
 use Relaticle\Chat\Models\AiCreditBalance;
 
 mutates(CreateWorkspace::class, CreateWorkspaceAction::class, StartProTrial::class, UpdateUserName::class);
@@ -983,6 +986,45 @@ it('redirects a first workspace to its setup page', function (): void {
         ->assertNotNotified();
 
     $component->assertRedirect(SetupWorkspace::getUrl(['tenant' => $user->fresh()->currentWorkspace]));
+});
+
+it('still creates the workspace when its setup conversation appears between the check and the insert', function (): void {
+    Feature::define(SetupConversation::class, true);
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user);
+
+    $inserted = false;
+
+    DB::listen(function (QueryExecuted $query) use ($user, &$inserted): void {
+        if ($inserted || ! str_contains($query->sql, 'from "agent_conversations"') || ! str_contains($query->sql, 'exists')) {
+            return;
+        }
+
+        $inserted = true;
+
+        DB::table('agent_conversations')->insert([
+            'id' => (string) Str::uuid7(),
+            'participant_type' => $user->getMorphClass(),
+            'participant_id' => (string) $user->getKey(),
+            'workspace_id' => $query->bindings[0],
+            'title' => 'Raced setup',
+            'purpose' => AgentConversation::PURPOSE_SETUP,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    });
+
+    livewire(CreateWorkspace::class)
+        ->fillForm(['name' => 'Raced Setup Corp'])
+        ->call('register')
+        ->assertHasNoFormErrors();
+
+    $workspace = Workspace::query()->where('name', 'Raced Setup Corp')->sole();
+
+    expect($inserted)->toBeTrue()
+        ->and($workspace->setupConversation()->count())->toBe(1);
 });
 
 it('redirects a first workspace to its setup page when the setup conversation is off', function (): void {
