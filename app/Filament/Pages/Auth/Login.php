@@ -138,9 +138,7 @@ final class Login extends \Filament\Auth\Pages\Login
         $submittedEmail = EmailAddress::canonicalize((string) ($this->data['email'] ?? ''));
 
         if ($submittedEmail !== $this->discoveredEmail) {
-            $this->authMethod = null;
-            $this->passkeyUserHasPassword = false;
-            $this->discoveredEmail = null;
+            $this->forgetDiscovery();
             $this->discover();
 
             return null;
@@ -190,9 +188,7 @@ final class Login extends \Filament\Auth\Pages\Login
         $submittedEmail = EmailAddress::canonicalize((string) ($this->data['email'] ?? ''));
 
         if ($submittedEmail !== $this->discoveredEmail) {
-            $this->authMethod = null;
-            $this->passkeyUserHasPassword = false;
-            $this->discoveredEmail = null;
+            $this->forgetDiscovery();
             $this->discover();
 
             return null;
@@ -256,13 +252,19 @@ final class Login extends \Filament\Auth\Pages\Login
     private function switchToSignInForExistingAccount(): never
     {
         $this->resetTurnstileChallenge();
-        $this->authMethod = null;
-        $this->passkeyUserHasPassword = false;
+        $this->forgetDiscovery();
         $this->discover();
 
         throw ValidationException::withMessages([
             'data.email' => __('auth.login.account_exists'),
         ]);
+    }
+
+    private function forgetDiscovery(): void
+    {
+        $this->authMethod = null;
+        $this->passkeyUserHasPassword = false;
+        $this->discoveredEmail = null;
     }
 
     private function getPasswordHelperText(): ?string
@@ -403,11 +405,7 @@ final class Login extends \Filament\Auth\Pages\Login
             ->rules(RegistrableEmail::rules(), condition: fn (): bool => $this->authMethod === 'signup')
             ->unique(table: fn (): ?string => $this->authMethod === 'signup' ? 'users' : null)
             ->live(onBlur: true)
-            ->afterStateUpdated(function (): void {
-                $this->authMethod = null;
-                $this->passkeyUserHasPassword = false;
-                $this->discoveredEmail = null;
-            });
+            ->afterStateUpdated($this->forgetDiscovery(...));
     }
 
     protected function getPasswordFormComponent(): TextInput
