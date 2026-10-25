@@ -70,6 +70,12 @@ Use a recovery code if you cannot access your authenticator app.
 and last activity. **Log Out Other Browser Sessions** signs out every device
 except the one you're using; do this whenever you've used a shared machine.
 
+Changing or resetting your password also signs out your other devices.
+
+On a self-hosted install that keeps sessions in Redis, other devices stop
+staying signed in, but one in use right now stays signed in until its session
+expires. Change your password to end it at once.
+
 ## Notifications
 
 The **Notifications** page beside your profile settings controls task

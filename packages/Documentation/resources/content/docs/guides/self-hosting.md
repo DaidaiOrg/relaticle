@@ -133,7 +133,7 @@ When the websocket is unreachable, the chat still works. Each reply appears a fe
 
 | Variable | Description |
 |----------|-------------|
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID for social login. |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID for social login. The Google button appears only when this is set. |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret. |
 | `GOOGLE_REDIRECT_URI` | Absolute callback URL (`https://your-host/auth/callback/google`), or a relative path (`/auth/callback/google`) to derive the host from the request. |
 | `MICROSOFT_CLIENT_ID` | Microsoft Entra ID client id. The Microsoft button appears only when this is set; register `https://your-host/auth/callback/microsoft` as the redirect URI. |
