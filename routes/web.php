@@ -38,7 +38,6 @@ use App\Http\Middleware\EnsureSocialiteProviderIsAvailable;
 use App\Http\Middleware\ThrottleBeforeAuthentication;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
-use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Pennant\Feature;
@@ -200,7 +199,7 @@ Route::prefix('impersonate')->group(function (): void {
         ->name('impersonation.stop');
 });
 
-Route::middleware(['auth', 'verified', 'no-referrer', AuthenticateSession::class])->group(function (): void {
+Route::middleware(['auth', 'verified', 'no-referrer'])->group(function (): void {
     // Separate buckets: a shared one lets repeated views of the invite page
     // spend the allowance the accept POST needs.
     Route::get('/invitations/{token}', [AcceptWorkspaceInvitationController::class, 'show'])
@@ -221,7 +220,7 @@ Route::middleware(['auth', 'verified', 'no-referrer', AuthenticateSession::class
         ->name('workspace-invitations.token.switch');
 });
 
-Route::middleware(['auth', 'verified', 'no-referrer', AuthenticateSession::class])
+Route::middleware(['auth', 'verified', 'no-referrer'])
     ->group(function (): void {
         Route::get('/join/{token}', [JoinWorkspaceViaLinkController::class, 'show'])
             ->where('token', '[A-Za-z0-9]{40}')

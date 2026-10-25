@@ -35,7 +35,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Middleware\SubstituteBindings;
-use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
@@ -89,7 +88,7 @@ return Application::configure(basePath: dirname(__DIR__))
             $routes->group(base_path('routes/api.php'));
         },
     )
-    ->withBroadcasting(__DIR__.'/../routes/channels.php', ['middleware' => ['web', AuthenticateSession::class]])
+    ->withBroadcasting(__DIR__.'/../routes/channels.php', ['middleware' => ['web']])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trimStrings(except: [
             'document.*',
