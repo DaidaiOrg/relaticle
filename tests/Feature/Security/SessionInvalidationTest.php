@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Support\Auth\AuthenticationSession;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Passport\Client;
@@ -110,6 +111,33 @@ it('keeps the session that changed the password through the account endpoint sig
     ])->assertOk();
 
     getJson(route('chat.conversations'))->assertOk();
+});
+
+it('ends the other sessions of an account that sets its first password', function (): void {
+    config(['session.driver' => 'database']);
+
+    $user = User::factory()->socialOnly()->withPersonalWorkspace()->create();
+
+    DB::table('sessions')->insert([
+        'id' => 'signed-in-elsewhere',
+        'user_id' => $user->getKey(),
+        'ip_address' => '127.0.0.1',
+        'user_agent' => 'Mozilla/5.0',
+        'payload' => base64_encode('test'),
+        'last_activity' => time(),
+    ]);
+
+    actingAs($user);
+
+    AuthenticationSession::startOperation($user, 'set_password', null);
+    AuthenticationSession::proveOperation($user, 'set_password', null);
+
+    putJson(route('user-password.update'), [
+        'password' => 'a-first-password',
+        'password_confirmation' => 'a-first-password',
+    ])->assertOk();
+
+    expect(DB::table('sessions')->where('id', 'signed-in-elsewhere')->exists())->toBeFalse();
 });
 
 it('rejects an oauth consent approval from a session opened before the password changed', function (): void {
