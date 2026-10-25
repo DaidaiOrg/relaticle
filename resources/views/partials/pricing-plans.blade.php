@@ -13,9 +13,9 @@
                         </div>
                         <h2 class="font-display text-xl font-semibold tracking-tight text-gray-950 dark:text-white">{{ __('billing.plans.cloud_pro') }}</h2>
                     </div>
-                    <span class="shrink-0 rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-white">{{ __('Recommended') }}</span>
+                    <span class="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-white">{{ __('Recommended') }}</span>
                 </div>
-                <p class="mt-4 min-h-10 text-sm leading-5 text-gray-600 dark:text-gray-400">{{ __('A ready-to-use CRM for your whole team. Hosting included.') }}</p>
+                <p class="mt-4 text-sm leading-5 text-gray-600 dark:text-gray-400">{{ __('The whole CRM, hosted for you.') }}</p>
 
                 <div class="mt-8">
                     <p class="text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Per workspace') }}</p>
@@ -42,7 +42,7 @@
                         </li>
                     @endforeach
                 </ul>
-                <p class="mt-auto pt-6 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ __('Need more AI credits? Prepaid top-ups are available.') }}</p>
+                <p class="mt-auto pt-6 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ __('Top up AI credits anytime.') }}</p>
             </div>
         </section>
 
@@ -54,7 +54,7 @@
                     </div>
                     <h2 class="font-display text-xl font-semibold tracking-tight text-gray-950 dark:text-white">{{ __('billing.plans.enterprise') }}</h2>
                 </div>
-                <p class="mt-4 min-h-10 text-sm leading-5 text-gray-600 dark:text-gray-400">{{ __('billing.enterprise.tagline') }}</p>
+                <p class="mt-4 text-sm leading-5 text-gray-600 dark:text-gray-400">{{ __('billing.enterprise.tagline') }}</p>
 
                 <div class="mt-8" aria-label="{{ __('billing.enterprise.starting_price', ['price' => $enterprisePrice]) }}">
                     <p class="text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Starting at') }}</p>

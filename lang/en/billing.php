@@ -139,7 +139,7 @@ return [
     'enterprise' => [
         'title' => 'Enterprise plan',
         'body' => 'Your plan is managed by Relaticle. Contact us for changes.',
-        'tagline' => 'Implementation and support, scoped to your team.',
+        'tagline' => 'We build it around how you work.',
         'starting_price' => 'From $:price / year',
         'billing' => 'Billed yearly · never per seat',
         'includes' => 'Everything in Cloud Pro, plus',
@@ -150,7 +150,7 @@ return [
             'Ongoing maintenance and support',
             'Direct access to the founding team',
         ],
-        'terms' => 'Scope, usage, support, and delivery milestones agreed before signing.',
+        'terms' => 'Scope and price agreed before you sign.',
         'contact' => 'Talk to us',
         'manage' => 'Contact your Relaticle team',
         'previous_subscription_canceling' => 'Your previous subscription ends on :date. Your Enterprise access is unchanged.',

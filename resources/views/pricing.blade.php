@@ -23,12 +23,12 @@
 
             <h1 class="text-balance font-display text-4xl font-bold leading-[1.1] tracking-[-0.03em] text-gray-950 dark:text-white sm:text-5xl">
                 @if($billingActive)
-                    {{ __('One price for your whole team.') }}
+                    {{ __('Pay per workspace. Never per seat.') }}
                 @else
                     {{ __('No per-seat pricing. Ever.') }}
                 @endif
             </h1>
-            <p class="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-gray-500 dark:text-gray-400 md:text-lg">
+            <p class="mx-auto mt-5 max-w-2xl text-balance text-base leading-relaxed text-gray-500 dark:text-gray-400 md:text-lg">
                 {{ $billingActive
                     ? __('Unlimited users and records on every plan. Start with Cloud Pro, or work with us on a tailored implementation.')
                     : __('Unlimited users. Unlimited records. Self-host for free, or let us run it for you.') }}

@@ -26,7 +26,7 @@ it('shows the pro tier when billing is on', function (): void {
 
     $this->get('/pricing')
         ->assertOk()
-        ->assertSee('One price for your whole team.')
+        ->assertSee('Pay per workspace. Never per seat.')
         ->assertSee('$19')
         ->assertSee('$24')
         ->assertSee('$228 billed yearly')
@@ -329,7 +329,7 @@ it('offers Enterprise through a scoped sales inquiry with an annual starting pri
 
     $response = $this->get('/pricing')
         ->assertSee('From $20,000 / year')
-        ->assertSee('Scope, usage, support, and delivery milestones agreed before signing.')
+        ->assertSee('Scope and price agreed before you sign.')
         ->assertSee('What does Enterprise include?');
 
     $card = (new Crawler((string) $response->getContent()))->filter('#enterprise-plan');
