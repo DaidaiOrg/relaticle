@@ -20,6 +20,9 @@ final class StripeRecorder implements ClientInterface
     /** @var list<array{url: string, params: array<string, mixed>}> */
     public array $requests = [];
 
+    /** @var array<string, array<string, mixed>> */
+    private array $responses = [];
+
     public static function install(): self
     {
         $recorder = new self;
@@ -27,6 +30,14 @@ final class StripeRecorder implements ClientInterface
         ApiRequestor::setHttpClient($recorder);
 
         return $recorder;
+    }
+
+    /** @param  array<string, mixed>  $body */
+    public function respondTo(string $urlFragment, array $body): self
+    {
+        $this->responses[$urlFragment] = $body;
+
+        return $this;
     }
 
     public static function uninstall(): void
@@ -42,6 +53,12 @@ final class StripeRecorder implements ClientInterface
     public function request($method, $absUrl, $headers, $params, $hasFile, $apiMode = 'v1', $maxNetworkRetries = null): array
     {
         $this->requests[] = ['url' => (string) $absUrl, 'params' => $params];
+
+        foreach ($this->responses as $urlFragment => $response) {
+            if (str_contains((string) $absUrl, $urlFragment)) {
+                return [json_encode($response), 200, []];
+            }
+        }
 
         $body = match (true) {
             str_contains((string) $absUrl, '/checkout/sessions') => [
