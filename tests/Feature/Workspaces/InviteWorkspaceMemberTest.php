@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Ai\Tools\Request;
+use Laravel\Jetstream\Events\InvitingTeamMember;
 use Livewire\Features\SupportTesting\Testable;
 use Relaticle\Chat\Enums\PendingActionStatus;
 use Relaticle\Chat\Models\PendingAction;
@@ -115,6 +116,23 @@ test('inviting an address with a live invitation is still refused', function () 
 
     expect(fn () => resolve(InviteWorkspaceMember::class)->invite($this->user, $this->workspace, 'pending@example.com', 'member'))
         ->toThrow(ValidationException::class, __('workspaces.validation.email_already_invited'));
+});
+
+test('a re-invite that another request reissued first is refused instead of sent twice', function () {
+    $invite = fn (): WorkspaceInvitation => resolve(InviteWorkspaceMember::class)->invite($this->user, $this->workspace, 'raced@example.com', 'member');
+
+    $invite();
+    WorkspaceInvitation::query()->where('email', 'raced@example.com')->update(['expires_at' => now()->subDay()]);
+
+    Event::listen(InvitingTeamMember::class, function (): void {
+        $reissued = WorkspaceInvitation::query()->where('email', 'raced@example.com')->sole();
+        $reissued->issueToken();
+        $reissued->save();
+    });
+
+    expect($invite)->toThrow(ValidationException::class, __('workspaces.validation.email_already_invited'));
+
+    Mail::assertQueued(WorkspaceInvitationMail::class, 1);
 });
 
 test('workspace member invitations can be revoked', function () {
