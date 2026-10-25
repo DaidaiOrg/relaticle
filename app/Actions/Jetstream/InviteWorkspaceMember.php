@@ -13,19 +13,15 @@ use App\Rules\RegistrableEmail;
 use App\Support\EmailAddress;
 use App\Support\Workspaces\InvitationCeiling;
 use Closure;
-use Illuminate\Database\Query\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Unique;
 use Illuminate\Validation\ValidationException;
 use Laravel\Jetstream\Contracts\InvitesTeamMembers;
 use Laravel\Jetstream\Events\InvitingTeamMember;
-use Laravel\Jetstream\Jetstream;
 use Laravel\Jetstream\Rules\Role;
 
 final readonly class InviteWorkspaceMember implements InvitesTeamMembers
@@ -108,9 +104,9 @@ final readonly class InviteWorkspaceMember implements InvitesTeamMembers
         Validator::make([
             'email' => $email,
             'role' => $role,
-        ], $this->rules($workspace), [
-            'email.unique' => __('workspaces.validation.email_already_invited'),
-        ])->after(
+        ], $this->rules())->after(
+            $this->ensureAddressIsNotAlreadyInvited($workspace, $email)
+        )->after(
             $this->ensureUserIsNotAlreadyOnWorkspace($workspace, $email)
         )->validateWithBag('addWorkspaceMember');
     }
@@ -126,19 +122,25 @@ final readonly class InviteWorkspaceMember implements InvitesTeamMembers
     /**
      * Get the validation rules for inviting a workspace member.
      *
-     * @return array<string, list<Unique|Role|string>>
+     * @return array<string, list<Role|string>>
      */
-    private function rules(Workspace $workspace): array
+    private function rules(): array
     {
         return [
-            'email' => [
-                'required', ...self::emailRules(),
-                Rule::unique(Jetstream::teamInvitationModel())->where(function (Builder $query) use ($workspace): void {
-                    $query->where('workspace_id', $workspace->id)->where('expires_at', '>', now());
-                }),
-            ],
+            'email' => ['required', ...self::emailRules()],
             'role' => ['required', 'string', new Role],
         ];
+    }
+
+    private function ensureAddressIsNotAlreadyInvited(Workspace $workspace, string $email): Closure
+    {
+        return function ($validator) use ($workspace, $email): void { // @pest-ignore-type
+            $validator->errors()->addIf(
+                $workspace->workspaceInvitations()->unexpired()->where('email', $email)->exists(),
+                'email',
+                __('workspaces.validation.email_already_invited')
+            );
+        };
     }
 
     /**
