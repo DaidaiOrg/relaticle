@@ -125,11 +125,11 @@
 
                 @if (! $hasPassword && $provider)
                     <a
-                        href="{{ route('auth.socialite.confirm.redirect', ['provider' => $provider]) }}"
+                        href="{{ route('auth.socialite.confirm.redirect', ['provider' => $provider->value]) }}"
                         class="mt-5 block"
                     >
-                        <x-filament::button color="gray" :icon="$providerIcon" class="w-full justify-center" tag="span">
-                            {{ __('auth.confirm.continue_with_provider', ['provider' => ucfirst($provider)]) }}
+                        <x-filament::button color="gray" :icon="$provider->icon()" class="w-full justify-center" tag="span">
+                            {{ __('auth.confirm.continue_with_provider', ['provider' => $provider->label()]) }}
                         </x-filament::button>
                     </a>
                 @endif

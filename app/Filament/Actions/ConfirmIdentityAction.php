@@ -460,15 +460,15 @@ final class ConfirmIdentityAction extends Action
             return null;
         }
 
-        $provider = $account->provider_name;
+        $provider = SocialiteProvider::from($account->provider_name);
 
         return Action::make('confirmWithProvider')
-            ->label(__('auth.confirm.continue_with_provider', ['provider' => ucfirst($provider)]))
-            ->icon(SocialiteProvider::tryFrom($provider)?->icon())
+            ->label(__('auth.confirm.continue_with_provider', ['provider' => $provider->label()]))
+            ->icon($provider->icon())
             ->action(function () use ($provider): RedirectResponse {
                 $this->rememberResumableAction();
 
-                return redirect()->to(route('auth.socialite.confirm.redirect', ['provider' => $provider]));
+                return redirect()->to(route('auth.socialite.confirm.redirect', ['provider' => $provider->value]));
             });
     }
 

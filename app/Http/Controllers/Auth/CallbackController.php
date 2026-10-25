@@ -63,7 +63,7 @@ final readonly class CallbackController
         } catch (Throwable $e) {
             report($e);
 
-            return $this->handleError($this->parseProviderError($e->getMessage(), $provider->value));
+            return $this->handleError($this->parseProviderError($e->getMessage(), $provider));
         }
     }
 

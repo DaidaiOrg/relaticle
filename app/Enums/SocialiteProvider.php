@@ -14,6 +14,14 @@ enum SocialiteProvider: string
     case GOOGLE = 'google';
     case MICROSOFT = 'microsoft';
 
+    public function label(): string
+    {
+        return match ($this) {
+            self::GOOGLE => 'Google',
+            self::MICROSOFT => 'Microsoft',
+        };
+    }
+
     public function icon(): string
     {
         return match ($this) {

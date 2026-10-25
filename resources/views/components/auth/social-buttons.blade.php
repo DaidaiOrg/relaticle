@@ -22,7 +22,7 @@
                     <path fill="#FBBC05"
                           d="M5.277 14.268A7.12 7.12 0 0 1 4.909 12c0-.782.125-1.533.357-2.235L1.24 6.65A11.934 11.934 0 0 0 0 12c0 1.92.445 3.73 1.237 5.335l4.04-3.067Z"/>
                 </svg>
-                {{ __('auth.login.continue_with', ['provider' => 'Google']) }}
+                {{ __('auth.login.continue_with', ['provider' => \App\Enums\SocialiteProvider::GOOGLE->label()]) }}
                 <span x-show="last === 'google'" x-cloak class="ms-2 rounded-full bg-primary-100 px-2 py-0.5 text-xs text-primary-700 dark:bg-primary-500/20 dark:text-primary-300">{{ __('auth.login.last_used') }}</span>
             </span>
         </x-filament::button>
@@ -44,7 +44,7 @@
                     <path fill="#05A6F0" d="M1 13h10v10H1z"/>
                     <path fill="#FFBA08" d="M13 13h10v10H13z"/>
                 </svg>
-                {{ __('auth.login.continue_with', ['provider' => 'Microsoft']) }}
+                {{ __('auth.login.continue_with', ['provider' => \App\Enums\SocialiteProvider::MICROSOFT->label()]) }}
                 <span x-show="last === 'microsoft'" x-cloak class="ms-2 rounded-full bg-primary-100 px-2 py-0.5 text-xs text-primary-700 dark:bg-primary-500/20 dark:text-primary-300">{{ __('auth.login.last_used') }}</span>
             </span>
         </x-filament::button>

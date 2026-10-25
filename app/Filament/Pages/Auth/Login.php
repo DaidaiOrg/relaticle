@@ -7,6 +7,7 @@ namespace App\Filament\Pages\Auth;
 use App\Actions\Auth\AuthenticatePassword;
 use App\Actions\Fortify\CreateNewUser;
 use App\Concerns\DetectsWorkspaceInvitation;
+use App\Enums\SocialiteProvider;
 use App\Models\User;
 use App\Models\WorkspaceInvitation;
 use App\Rules\RegistrableEmail;
@@ -288,7 +289,7 @@ final class Login extends \Filament\Auth\Pages\Login
         if ($this->authMethod === 'social') {
             return Blade::render(
                 '<p role="status" class="mt-3 text-center text-sm text-gray-500 dark:text-gray-400">{{ __(\'auth.login.social_hint\', [\'provider\' => $provider]) }}</p>',
-                ['provider' => ucfirst((string) $this->socialProvider)],
+                ['provider' => SocialiteProvider::from((string) $this->socialProvider)->label()],
             );
         }
 
