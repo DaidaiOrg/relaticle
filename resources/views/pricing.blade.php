@@ -161,7 +161,7 @@
                         <tbody class="divide-y divide-gray-100 dark:divide-white/[0.06]">
                             @foreach(array_filter([
                                 [__('Users and records'), __('Unlimited'), __('Unlimited'), __('Unlimited')],
-                                [__(':name, the AI assistant', ['name' => config('chat.assistant_name')]), __('2,000 credits each month'), __(':credits credits each month', ['credits' => $conciergeCredits]), __('Usage agreed with your team')],
+                                [__(':name, the AI assistant', ['name' => config('chat.assistant_name')]), __(':credits credits each month', ['credits' => $proCredits]), __(':credits credits each month', ['credits' => $conciergeCredits]), __('Usage agreed with your team')],
                                 \Laravel\Pennant\Feature::active(\App\Features\EmailIntegration::class)
                                     ? [__('Email and calendar'), __('Gmail and Outlook sync'), __('Gmail and Outlook sync'), __('Gmail and Outlook sync')]
                                     : null,
