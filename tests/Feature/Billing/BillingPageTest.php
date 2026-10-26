@@ -430,6 +430,15 @@ it('shows Concierge as a managed plan with its allowance and no upgrade actions'
         ->assertDontSee(__('billing.upgrade.button'));
 });
 
+it('shows a managed plan, not a pending activation, when a checkout returns', function (Plan $plan): void {
+    [, $workspace] = billingPageOwner();
+    $workspace->forceFill(['plan' => $plan])->save();
+
+    livewire(Billing::class, ['checkout' => Billing::CHECKOUT_SUCCESS])
+        ->assertSee(__('billing.status.managed'))
+        ->assertDontSee(__('billing.upgrade.activating'));
+})->with([Plan::Enterprise, Plan::Concierge]);
+
 it('renders read-only info for members', function (): void {
     config()->set('services.stripe.credit_packs.small', ['price' => 'price_credits_1k_test', 'credits' => 1000]);
     [, $workspace] = billingPageOwner();
