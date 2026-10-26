@@ -72,9 +72,10 @@ except the one you're using; do this whenever you've used a shared machine.
 
 Changing or resetting your password also signs out your other devices.
 
-On a self-hosted install that keeps sessions in Redis, other devices stop
-staying signed in, but one in use right now stays signed in until its session
-expires. Change your password to end it at once.
+On a self-hosted install that keeps sessions in Redis, **Log Out Other
+Browser Sessions** works differently. It signs a device out only after the
+device sits idle for two hours, the default session lifetime. A device with
+Relaticle open stays signed in. Change your password to sign it out at once.
 
 ## Notifications
 
