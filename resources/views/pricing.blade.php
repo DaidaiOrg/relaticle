@@ -339,7 +339,7 @@
                                 ->priceCurrency('USD')
                                 ->unitText('year'))
                             ->url(route('contact', ['plan' => 'concierge']))
-                            ->description(__('billing.concierge.faq_body', ['credits' => $conciergeCredits, 'pro_credits' => number_format(\App\Enums\Plan::Pro->credits()), 'price' => $conciergePrice])),
+                            ->description(__('billing.concierge.faq_body', ['credits' => $conciergeCredits, 'pro_credits' => $proCredits, 'price' => $conciergePrice])),
                         \Spatie\SchemaOrg\Schema::offer()
                             ->name('Enterprise')
                             ->priceSpecification(\Spatie\SchemaOrg\Schema::unitPriceSpecification()
