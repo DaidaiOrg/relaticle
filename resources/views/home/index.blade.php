@@ -4,7 +4,7 @@
     $emailIntegrationActive = \Laravel\Pennant\Feature::active(\App\Features\EmailIntegration::class);
 
     $faqs = array_values(array_filter([
-        ['Is Relaticle production-ready?', 'Yes. Relaticle Cloud runs in production today, and every change passes an automated test suite before it ships, and each workspace\'s data stays separate behind role-based permissions.'],
+        ['Is Relaticle production-ready?', 'Yes. Relaticle Cloud runs in production today. Every change passes an automated test suite before it ships. Each workspace\'s data stays separate behind role-based permissions.'],
         ["What can {$assistantName} do?", "{$assistantName} is the AI assistant built into Relaticle. Ask it anything about your CRM and it works on your data: list and search records, draft follow-ups, summarize an opportunity, create a task, update or delete a record. @-mention any record (people, companies, opportunities, tasks, notes) to scope a question. Voice input and persistent, searchable history are included."],
         ["Can {$assistantName} create, change, or delete my CRM data without my approval?", "No. {$assistantName} proposes every create, update, and delete as a card showing exactly what will change. Nothing is written until you confirm it, and you can discard any proposal. An unanswered proposal expires after {$proposalExpiry}. Reading and searching need no approval."],
         ['Do external AI agents need my approval for each change?', "No. An agent you connect over MCP, such as Claude or ChatGPT, acts with your permissions in the one workspace you approved, and its changes apply directly. Only {$assistantName} adds a review step before every write."],

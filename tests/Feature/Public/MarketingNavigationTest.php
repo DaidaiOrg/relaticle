@@ -53,16 +53,6 @@ it('links a page for every connectable assistant from the footer', function (): 
     }
 });
 
-it('links a page for every connectable assistant from the works-with strip on the homepage', function (): void {
-    $html = $this->get('/')->assertOk()->getContent();
-
-    preg_match('/<section aria-label="'.preg_quote(__('Works with'), '/').'"[\s\S]*?<\/section>/', $html, $strip);
-
-    foreach (ConnectableAssistant::cases() as $assistant) {
-        expect($strip[0])->toContain('href="'.route($assistant->routeName()).'"');
-    }
-});
-
 it('names the assistant from config in both the header and the footer', function (): void {
     config()->set('chat.assistant_name', 'Testbot');
 
@@ -208,7 +198,7 @@ it('links the product pages from page copy, not only from the sitewide nav', fun
         ->and($body)->toContain('href="'.route('selfHosted').'"');
 })->with(['/', '/pricing', '/compare/relaticle-vs-twenty', '/alternatives/attio']);
 
-it('renders the works-with strip on the homepage with a link to the developer docs', function (): void {
+it('renders the works-with strip on the homepage with links to the assistant pages and the developer docs', function (): void {
     Cache::put('dockerhub_pulls_manukminasyan_relaticle', 21030, 60);
 
     $html = $this->get('/')->assertOk()->getContent();
@@ -220,6 +210,10 @@ it('renders the works-with strip on the homepage with a link to the developer do
         ->and($strip)->toContain('Claude', 'ChatGPT', 'Cursor', 'Gemini', '+ any MCP client')
         ->and($strip)->toContain('href="'.route('documentation.index').'"')
         ->and($strip)->toContain('21,000+');
+
+    foreach (ConnectableAssistant::cases() as $assistant) {
+        expect($strip)->toContain('href="'.route($assistant->routeName()).'"');
+    }
 });
 
 it('renders the homepage without the product hunt launch badge', function (): void {

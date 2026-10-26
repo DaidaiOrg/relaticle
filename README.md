@@ -34,7 +34,7 @@
 
 Relaticle is a self-hosted CRM your AI agents can work in. Connect Claude, ChatGPT, or an open-source model over MCP to read, write, and analyze your CRM data. Custom fields, REST API, and multi-workspace isolation.
 
-**Built for:** people who sell to a named list of companies without a sales team, and want Claude, ChatGPT, or their own agent working in the CRM.
+**Built for:** people who sell to a named list of companies without a sales team. Connect Claude, ChatGPT, or your own agent to work in the CRM.
 
 **Core Strengths:**
 

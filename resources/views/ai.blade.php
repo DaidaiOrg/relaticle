@@ -77,7 +77,7 @@
         [
             __('Does :name invent data?', ['name' => $assistantName]),
             __(
-                ':name answers from the records in your workspace and Relaticle\'s product documentation. It links each record it mentions, so you can open the source. Like any AI model, it can misread a record. Check an answer that matters, and read each proposal before you approve it.',
+                ':name answers from the records in your workspace and Relaticle\'s product documentation. It links the records it names, so you can open the source. Like any AI model, it can misread a record. Check an answer that matters, and read each proposal before you approve it.',
                 ['name' => $assistantName]
             ),
         ],
