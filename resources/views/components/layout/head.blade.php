@@ -32,15 +32,16 @@
 @php
     // Bump the version whenever public/images/open-graph.jpg is regenerated
     // so social caches re-scrape it.
-    $defaultOgImage = url('/images/open-graph.jpg').'?v=3';
+    $defaultOgImage = url('/images/open-graph.jpg').'?v=4';
+    [$ogImageWidth, $ogImageHeight] = $ogImage === null ? [2400, 1260] : [1200, 630];
 @endphp
 
 <!-- Open Graph Meta Tags -->
 <meta property="og:title" content="{{ $ogTitle ?? $title ?? config('app.name', 'Relaticle') }}"/>
 <meta property="og:description" content="{{ $ogDescription ?? $description }}"/>
 <meta property="og:image" content="{{ $ogImage ?? $defaultOgImage }}"/>
-<meta property="og:image:width" content="1200"/>
-<meta property="og:image:height" content="630"/>
+<meta property="og:image:width" content="{{ $ogImageWidth }}"/>
+<meta property="og:image:height" content="{{ $ogImageHeight }}"/>
 <meta property="og:image:alt" content="{{ $ogTitle ?? $title ?? config('app.name', 'Relaticle') }}"/>
 <meta property="og:url" content="{{ request()->getUri() }}"/>
 <meta property="og:type" content="{{ $ogType }}" />
