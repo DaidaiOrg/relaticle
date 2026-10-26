@@ -2,10 +2,10 @@
     $mailbox = $this->connectedMailbox();
 @endphp
 
-<form wire:submit="saveSharing" wire:poll.5s class="flex flex-1 flex-col">
-    <h3 class="text-xl font-bold tracking-tight text-gray-950 dark:text-white">
+<form wire:submit="saveSharing" wire:poll.5s class="flex min-w-0 flex-1 flex-col">
+    <x-onboarding.step-heading wire:key="setup-step-heading-sharing">
         {{ __('filament/pages/workspaces.setup_workspace.sharing.heading') }}
-    </h3>
+    </x-onboarding.step-heading>
     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
         @if ($mailbox?->isActive())
             {{ __('filament/pages/workspaces.setup_workspace.sharing.syncing') }}

@@ -22,22 +22,25 @@ use App\Http\Middleware\ValidateSignature;
 use App\Models\Notification;
 use Filament\Facades\Filament;
 use Filament\Http\Middleware\SetUpPanel;
+use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Middleware\SubstituteBindings;
-use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Laravel\Cashier\Http\Middleware\VerifyWebhookSignature;
+use Laravel\Fortify\Fortify;
 use Laravel\Pennant\Feature;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use Livewire\Exceptions\MethodNotFoundException;
@@ -56,6 +59,7 @@ use Spatie\Health\Commands\ScheduleCheckHeartbeatCommand;
 use Spatie\MarkdownResponse\Actions\DetectsMarkdownRequest;
 use Spatie\MarkdownResponse\Enums\DetectionMethod;
 use Spatie\MarkdownResponse\Support\Config;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -84,7 +88,7 @@ return Application::configure(basePath: dirname(__DIR__))
             $routes->group(base_path('routes/api.php'));
         },
     )
-    ->withBroadcasting(__DIR__.'/../routes/channels.php', ['middleware' => ['web', AuthenticateSession::class]])
+    ->withBroadcasting(__DIR__.'/../routes/channels.php', ['middleware' => ['web']])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trimStrings(except: [
             'document.*',
@@ -115,6 +119,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Global rather than the web group: Filament panel routes do not run the web group.
         $middleware->append(SecurityHeaders::class);
+
+        $middleware->authenticateSessions();
 
         $middleware->web(
             append: [
@@ -249,6 +255,42 @@ return Application::configure(basePath: dirname(__DIR__))
             $lines[] = '';
 
             return response(implode("\n", $lines), 404, ['Content-Type' => 'text/markdown; charset=UTF-8']);
+        });
+
+        // An expired or wrong-account verification link returns to the prompt, where Resend gets a working one.
+        $exceptions->render(function (HttpException $e, Request $request): ?RedirectResponse {
+            if ($e->getStatusCode() !== 403 || ! $request->routeIs('filament.app.auth.email-verification.verify')) {
+                return null;
+            }
+
+            FilamentNotification::make()->title(__('auth.verify_email.link_unusable'))->warning()->persistent()->send();
+
+            return to_route('filament.app.auth.email-verification.prompt');
+        });
+
+        // Sign-in and provider steps are retried, so a throttled one goes back with the wait instead of a bare 429 page.
+        $exceptions->render(function (ThrottleRequestsException $e, Request $request) use ($rendersJson): ?RedirectResponse {
+            if ($rendersJson($request)) {
+                return null;
+            }
+
+            $wait = __('auth.throttle', ['seconds' => $e->getHeaders()['Retry-After'] ?? 60]);
+
+            if ($request->routeIs('auth.socialite.*')) {
+                FilamentNotification::make()->title(__('auth.provider.failed_title'))->body($wait)->danger()->persistent()->send();
+
+                return $request->user() === null
+                    ? to_route('login')
+                    : redirect()->intended(Fortify::redirects('password-confirmation'));
+            }
+
+            $form = match (true) {
+                $request->routeIs('two-factor.login.store') => route('two-factor.login'),
+                $request->routeIs('identity.confirm.mfa.store') => route('identity.confirm.mfa'),
+                default => null,
+            };
+
+            return $form === null ? null : redirect()->to($form)->withErrors(['code' => $wait]);
         });
 
         // Stale tabs and deploy boundaries produce checksum failures that

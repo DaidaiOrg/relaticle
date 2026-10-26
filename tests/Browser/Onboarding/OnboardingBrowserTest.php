@@ -19,6 +19,8 @@ use Symfony\Component\DomCrawler\Crawler;
 
 mutates(CreateWorkspace::class, SetupWorkspace::class);
 
+const FOCUSED_HEADING = 'new Promise(resolve => { const end = Date.now() + 3000; const poll = () => { const focused = document.activeElement; focused?.tagName === "H1" || Date.now() > end ? resolve(focused?.tagName === "H1" ? focused.innerText.trim() : focused?.tagName) : setTimeout(poll, 50); }; poll(); })';
+
 const ACTION_MODALS_READY = 'new Promise(resolve => { const ready = () => document.querySelector(\'[x-data^="filamentActionModals"]\')?._x_dataStack !== undefined; const poll = () => ready() ? resolve(true) : setTimeout(poll, 25); poll(); })';
 
 function walkToMailboxStep(User $user, string $name, string $slug): AwaitableWebpage
@@ -283,6 +285,66 @@ it('stores the use case and its sub-option chosen in the browser', function (): 
     expect($workspace->onboarding_use_case)->toBe(OnboardingUseCase::Recruiting)
         ->and($workspace->onboarding_context)->toBe(['sourcing'])
         ->and($workspace->name)->toBe('Hiring Desk');
+});
+
+it('moves focus to the heading of each new wizard and setup step', function (): void {
+    Queue::fake();
+
+    $user = User::factory()->create();
+
+    loginViaBrowser($user)
+        ->assertPathIs('/app/new')
+        ->navigate('/app/new')
+        ->waitForText('Create your workspace')
+        ->assertScript('new Promise(resolve => { const end = Date.now() + 3000; const poll = () => document.activeElement?.id === "form.name" || Date.now() > end ? resolve(document.activeElement?.id) : setTimeout(poll, 50); poll(); })', 'form.name')
+        ->type('[id="form.name"]', 'Hiring Desk')
+        ->press('button:visible:has-text("Continue")')
+        ->waitForText('How did you hear about us?')
+        ->assertScript(FOCUSED_HEADING, 'How did you hear about us?')
+        ->press('button:visible:has-text("Back")')
+        ->assertScript(FOCUSED_HEADING, 'Create your workspace')
+        ->press('button:visible:has-text("Continue")')
+        ->assertScript(FOCUSED_HEADING, 'How did you hear about us?')
+        ->press('button:visible:has-text("Continue")')
+        ->waitForText('Start with the people you already email')
+        ->assertScript(FOCUSED_HEADING, 'Start with the people you already email')
+        ->assertScript(ACTION_MODALS_READY, true)
+        ->press("I'll add people and companies myself")
+        ->waitForText('Continue without your mailbox?')
+        ->press('button:visible:has-text("Yes, I\'m sure")')
+        ->waitForText('Help us customize your workspace')
+        ->assertScript(FOCUSED_HEADING, 'Help us customize your workspace')
+        ->press('button:visible:has-text("Back")')
+        ->waitForText('Start with the people you already email')
+        ->assertScript(FOCUSED_HEADING, 'Start with the people you already email')
+        ->assertScript(ACTION_MODALS_READY, true)
+        ->press("I'll add people and companies myself")
+        ->waitForText('Continue without your mailbox?')
+        ->press('button:visible:has-text("Yes, I\'m sure")')
+        ->waitForText('Help us customize your workspace')
+        ->assertScript(asyncAlpineComponentsLoaded())
+        ->click('[id$="onboarding_use_case-other"]')
+        ->press('button:visible:has-text("Continue")')
+        ->waitForText('Invite your team')
+        ->assertScript(FOCUSED_HEADING, 'Invite your team');
+});
+
+it('clears the required details error as soon as a detail is ticked', function (): void {
+    $user = User::factory()->create();
+
+    walkToMailboxStep($user, 'Hiring Desk', 'hiring-desk')
+        ->assertScript(ACTION_MODALS_READY, true)
+        ->press("I'll add people and companies myself")
+        ->waitForText('Continue without your mailbox?')
+        ->press('button:visible:has-text("Yes, I\'m sure")')
+        ->waitForText('Help us customize your workspace')
+        ->assertScript(asyncAlpineComponentsLoaded())
+        ->click('[id$="onboarding_use_case-recruiting"]')
+        ->waitForText('Pick what applies to you.')
+        ->press('button:visible:has-text("Continue")')
+        ->waitForText('The use case details field is required.')
+        ->click('[for$="onboarding_context-sourcing"]')
+        ->assertScript('new Promise(resolve => { const end = Date.now() + 3000; const poll = () => { const shown = document.body.innerText.includes("The use case details field is required."); shown && Date.now() < end ? setTimeout(poll, 50) : resolve(shown); }; poll(); })', false);
 });
 
 it('stores the assistant and the question behind an AI referral picked in the browser', function (): void {

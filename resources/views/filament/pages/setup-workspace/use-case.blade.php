@@ -8,9 +8,9 @@
         </div>
     @endif
 
-    <h3 class="text-xl font-bold tracking-tight text-gray-950 dark:text-white">
+    <x-onboarding.step-heading wire:key="setup-step-heading-use-case">
         {{ __('filament/pages/workspaces.create_workspace.headings.use_case') }}
-    </h3>
+    </x-onboarding.step-heading>
     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
         {{ __('filament/pages/workspaces.create_workspace.headings.use_case_description') }}
     </p>
@@ -23,7 +23,7 @@
     </div>
 
     <div class="mt-auto pt-6">
-        <x-filament::button type="submit" size="lg" class="w-full">
+        <x-filament::button type="submit" size="lg" class="w-full" wire:target="saveUseCase">
             {{ __('filament/pages/workspaces.create_workspace.actions.continue') }}
         </x-filament::button>
     </div>

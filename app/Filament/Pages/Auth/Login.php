@@ -8,7 +8,6 @@ use App\Actions\Auth\AuthenticatePassword;
 use App\Actions\Fortify\CreateNewUser;
 use App\Concerns\DetectsWorkspaceInvitation;
 use App\Enums\SocialiteProvider;
-use App\Features\SocialAuth;
 use App\Models\User;
 use App\Models\WorkspaceInvitation;
 use App\Rules\RegistrableEmail;
@@ -18,11 +17,11 @@ use DanHarrin\LivewireRateLimiting\Exceptions\TooManyRequestsException;
 use Filament\Actions\Action;
 use Filament\Auth\Events\Registered;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse;
-use Filament\Auth\Notifications\VerifyEmail;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ViewField;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Html;
 use Filament\Schemas\Components\RenderHook;
 use Filament\Schemas\Schema;
@@ -39,7 +38,6 @@ use Illuminate\Support\HtmlString;
 use Illuminate\Support\Timebox;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
-use Laravel\Pennant\Feature;
 use Livewire\Attributes\Locked;
 use SensitiveParameter;
 use Spatie\Honeypot\Http\Livewire\Concerns\HoneypotData;
@@ -58,6 +56,9 @@ final class Login extends \Filament\Auth\Pages\Login
 
     #[Locked]
     public ?string $discoveredEmail = null;
+
+    #[Locked]
+    public ?string $socialProvider = null;
 
     public HoneypotData $extraFields;
 
@@ -138,9 +139,7 @@ final class Login extends \Filament\Auth\Pages\Login
         $submittedEmail = EmailAddress::canonicalize((string) ($this->data['email'] ?? ''));
 
         if ($submittedEmail !== $this->discoveredEmail) {
-            $this->authMethod = null;
-            $this->passkeyUserHasPassword = false;
-            $this->discoveredEmail = null;
+            $this->forgetDiscovery();
             $this->discover();
 
             return null;
@@ -168,6 +167,13 @@ final class Login extends \Filament\Auth\Pages\Login
             ]);
         }
 
+        // A pending MFA challenge leaves the pre-login destination in url.intended for CompleteAuthentication.
+        if (! Filament::auth()->check()) {
+            $this->redirect($next);
+
+            return null;
+        }
+
         session()->put('url.intended', $next);
 
         return resolve(LoginResponse::class);
@@ -183,15 +189,29 @@ final class Login extends \Filament\Auth\Pages\Login
         $submittedEmail = EmailAddress::canonicalize((string) ($this->data['email'] ?? ''));
 
         if ($submittedEmail !== $this->discoveredEmail) {
-            $this->authMethod = null;
-            $this->passkeyUserHasPassword = false;
-            $this->discoveredEmail = null;
+            $this->forgetDiscovery();
             $this->discover();
 
             return null;
         }
 
         $this->protectAgainstSpam();
+
+        try {
+            $this->rateLimit(5);
+        } catch (TooManyRequestsException $exception) {
+            Notification::make()
+                ->title(__('auth.login.signup_throttled_title'))
+                ->body(__('auth.login.signup_throttled_body', ['seconds' => $exception->secondsUntilAvailable]))
+                ->danger()
+                ->send();
+
+            return null;
+        }
+
+        if (User::query()->where('email', $submittedEmail)->exists()) {
+            $this->switchToSignInForExistingAccount();
+        }
 
         try {
             $data = $this->form->getState();
@@ -202,16 +222,7 @@ final class Login extends \Filament\Auth\Pages\Login
         }
 
         $email = EmailAddress::canonicalize((string) $data['email']);
-
-        try {
-            $user = resolve(CreateNewUser::class)->execute($email, (string) $data['password']);
-        } catch (UniqueConstraintViolationException) {
-            $this->resetTurnstileChallenge();
-
-            throw ValidationException::withMessages([
-                'data.email' => __('validation.unique', ['attribute' => __('filament-panels::auth/pages/login.form.email.label')]),
-            ]);
-        }
+        $user = $this->createAccount($email, (string) $data['password']);
 
         $invitation = $this->getWorkspaceInvitationFromSession();
 
@@ -223,7 +234,9 @@ final class Login extends \Filament\Auth\Pages\Login
 
         event(new Registered($user));
 
-        $this->sendEmailVerificationNotification($user);
+        if (! $user->hasVerifiedEmail()) {
+            $user->sendEmailVerificationNotification();
+        }
 
         Filament::auth()->login($user, remember: true);
 
@@ -232,16 +245,31 @@ final class Login extends \Filament\Auth\Pages\Login
         return resolve(LoginResponse::class);
     }
 
-    private function sendEmailVerificationNotification(User $user): void
+    private function createAccount(string $email, #[SensitiveParameter] string $hashedPassword): User
     {
-        if ($user->hasVerifiedEmail()) {
-            return;
+        try {
+            return resolve(CreateNewUser::class)->execute($email, $hashedPassword);
+        } catch (UniqueConstraintViolationException) {
+            $this->switchToSignInForExistingAccount();
         }
+    }
 
-        $notification = resolve(VerifyEmail::class);
-        $notification->url = Filament::getVerifyEmailUrl($user);
+    private function switchToSignInForExistingAccount(): never
+    {
+        $this->resetTurnstileChallenge();
+        $this->forgetDiscovery();
+        $this->discover();
 
-        $user->notify($notification);
+        throw ValidationException::withMessages([
+            'data.email' => __('auth.login.account_exists'),
+        ]);
+    }
+
+    private function forgetDiscovery(): void
+    {
+        $this->authMethod = null;
+        $this->passkeyUserHasPassword = false;
+        $this->discoveredEmail = null;
     }
 
     private function getPasswordHelperText(): ?string
@@ -267,7 +295,8 @@ final class Login extends \Filament\Auth\Pages\Login
 
         if ($this->authMethod === 'social') {
             return Blade::render(
-                '<p class="mt-3 text-center text-sm text-gray-500 dark:text-gray-400">{{ __(\'auth.login.social_hint\') }}</p>',
+                '<p role="status" class="mt-3 text-center text-sm text-gray-500 dark:text-gray-400">{{ __(\'auth.login.social_hint\', [\'provider\' => $provider]) }}</p>',
+                ['provider' => SocialiteProvider::from((string) $this->socialProvider)->label()],
             );
         }
 
@@ -311,15 +340,8 @@ final class Login extends \Filament\Auth\Pages\Login
                 return;
             }
 
-            if (! Feature::active(SocialAuth::class)) {
-                $this->authMethod = 'password';
-
-                return;
-            }
-
-            $this->authMethod = $this->resolveOfferedProvider($user) === null
-                ? 'password'
-                : 'social';
+            $this->socialProvider = $user->availableSocialAccount()?->provider_name;
+            $this->authMethod = $this->socialProvider === null ? 'password' : 'social';
         }, (int) config('auth.timebox_duration', 200_000));
     }
 
@@ -360,27 +382,6 @@ final class Login extends \Filament\Auth\Pages\Login
         RateLimiter::hit($emailKey, 60);
     }
 
-    protected function resolveOfferedProvider(User $user): ?string
-    {
-        return $user->socialAccounts()
-            ->pluck('provider_name')
-            ->first(fn (?string $providerName): bool => $this->isProviderOffered($providerName));
-    }
-
-    protected function isProviderOffered(?string $providerName): bool
-    {
-        $provider = SocialiteProvider::tryFrom((string) $providerName);
-
-        if ($provider === null) {
-            return false;
-        }
-
-        return match ($provider) {
-            SocialiteProvider::GOOGLE => true,
-            SocialiteProvider::MICROSOFT => filled(config('services.microsoft.client_id')),
-        };
-    }
-
     protected function getAuthenticateFormAction(): Action
     {
         return Action::make('authenticate')
@@ -409,11 +410,7 @@ final class Login extends \Filament\Auth\Pages\Login
             ->rules(RegistrableEmail::rules(), condition: fn (): bool => $this->authMethod === 'signup')
             ->unique(table: fn (): ?string => $this->authMethod === 'signup' ? 'users' : null)
             ->live(onBlur: true)
-            ->afterStateUpdated(function (): void {
-                $this->authMethod = null;
-                $this->passkeyUserHasPassword = false;
-                $this->discoveredEmail = null;
-            });
+            ->afterStateUpdated($this->forgetDiscovery(...));
     }
 
     protected function getPasswordFormComponent(): TextInput
@@ -423,7 +420,7 @@ final class Login extends \Filament\Auth\Pages\Login
             ->hiddenLabel()
             ->placeholder(__('auth.login.password_placeholder'))
             ->hint(fn (): ?HtmlString => ($this->authMethod === 'password' && filament()->hasPasswordReset())
-                ? new HtmlString(Blade::render('<x-filament::link :href="filament()->getRequestPasswordResetUrl()" tabindex="-1"> {{ __(\'filament-panels::auth/pages/login.actions.request_password_reset.label\') }}</x-filament::link>'))
+                ? new HtmlString(Blade::render('<x-filament::link :href="filament()->getRequestPasswordResetUrl()"> {{ __(\'filament-panels::auth/pages/login.actions.request_password_reset.label\') }}</x-filament::link>'))
                 : null)
             ->helperText(fn (): ?string => $this->getPasswordHelperText())
             ->password()
