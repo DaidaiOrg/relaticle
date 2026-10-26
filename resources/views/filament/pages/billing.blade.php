@@ -15,7 +15,7 @@
             && $workspace->plan === \App\Enums\Plan::Free
             && ! $onTrial
             && ! $isSubscribed;
-        $isManagedPlan = $isManaged || (! $subscription
+        $showsManagedCard = $isManaged || (! $subscription
             && ! $onTrial
             && ! $onLegacyFree
             && $workspace->plan !== \App\Enums\Plan::Free);
@@ -81,7 +81,7 @@
                             </div>
 
                             <p class="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
-                                @if($isManagedPlan)
+                                @if($showsManagedCard)
                                     {{ __('billing.managed.tagline') }}
                                 @elseif($onTrial)
                                     {{ __('billing.trial.active_title') }} ({{ trans_choice('billing.trial.days_left', $trialDaysLeft, ['days' => $trialDaysLeft]) }})
@@ -190,7 +190,7 @@
                 <x-ri-information-line class="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
                 <p class="text-sm text-gray-600 dark:text-gray-300">{{ __('billing.member.ask_owner', ['owner' => $workspace->owner->name]) }}</p>
             </div>
-        @elseif($isManagedPlan)
+        @elseif($showsManagedCard)
             <div class="{{ $card }} p-6">
                 <h3 class="font-display text-lg font-semibold text-gray-900 dark:text-white">{{ $isEnterprise ? __('billing.enterprise.title') : __('billing.managed.title') }}</h3>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ __('billing.enterprise.body') }}</p>
