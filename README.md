@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">The Open-Source CRM Built for People and AI-Powered Work</h1>
+<h1 align="center">The Open-Source AI CRM for Selling Without a Sales Team</h1>
 
 <p align="center">
   <a href="https://github.com/Relaticle/relaticle/actions/workflows/tests.yml?query=branch%3Amain"><img src="https://img.shields.io/github/actions/workflow/status/Relaticle/relaticle/tests.yml?branch=main&style=for-the-badge&label=tests" alt="Tests"></a>

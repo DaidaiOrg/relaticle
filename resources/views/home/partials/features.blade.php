@@ -15,7 +15,7 @@
                 One CRM. Three ways to work.
             </h2>
             <p class="mt-5 text-base md:text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
-                Work in the app, <a href="{{ route('ai') }}" class="text-gray-700 dark:text-gray-300 underline decoration-gray-300 dark:decoration-gray-600 underline-offset-4 hover:text-primary dark:hover:text-primary-400 hover:decoration-primary transition-colors">ask {{ config('chat.assistant_name') }} in chat</a>, or connect your agents. Keep your team working from the same customer data.
+                Work in the app, <a href="{{ route('ai') }}" class="text-gray-700 dark:text-gray-300 underline decoration-gray-300 dark:decoration-gray-600 underline-offset-4 hover:text-primary dark:hover:text-primary-400 hover:decoration-primary transition-colors">ask {{ config('chat.assistant_name') }} in chat</a>, or connect your agents. Every account and next step stays in one place.
             </p>
         </div>
 
@@ -28,7 +28,7 @@
                     Connect your AI agents
                 </h3>
                 <p class="{{ $cardDesc }} max-w-md">
-                    Connect Claude, ChatGPT, or your own agent. They work from the same records your team does.
+                    Connect Claude, ChatGPT, or your own agent. They read and update the same records you do.
                 </p>
 
                 @include('home.partials.agent-network')
