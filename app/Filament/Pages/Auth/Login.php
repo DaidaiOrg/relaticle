@@ -21,6 +21,7 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ViewField;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Html;
 use Filament\Schemas\Components\RenderHook;
 use Filament\Schemas\Schema;
@@ -199,7 +200,11 @@ final class Login extends \Filament\Auth\Pages\Login
         try {
             $this->rateLimit(5);
         } catch (TooManyRequestsException $exception) {
-            $this->getRateLimitedNotification($exception)?->send();
+            Notification::make()
+                ->title(__('auth.login.signup_throttled_title'))
+                ->body(__('auth.login.signup_throttled_body', ['seconds' => $exception->secondsUntilAvailable]))
+                ->danger()
+                ->send();
 
             return null;
         }

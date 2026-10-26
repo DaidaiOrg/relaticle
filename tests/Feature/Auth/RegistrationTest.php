@@ -61,7 +61,7 @@ it('throttles repeated signup submissions on one discovery', function (): void {
 
     $component->fillForm(['password' => 'short'])
         ->call('authenticate')
-        ->assertNotified(__('filament-panels::auth/pages/login.notifications.throttled.title', ['seconds' => 60, 'minutes' => 1]));
+        ->assertNotified(__('auth.login.signup_throttled_title'));
 });
 
 it('renders the signup event once and clears the flag', function (): void {
