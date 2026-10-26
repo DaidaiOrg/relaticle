@@ -53,6 +53,16 @@ it('links a page for every connectable assistant from the footer', function (): 
     }
 });
 
+it('links a page for every connectable assistant from the works-with strip on the homepage', function (): void {
+    $html = $this->get('/')->assertOk()->getContent();
+
+    preg_match('/<section aria-label="'.preg_quote(__('Works with'), '/').'"[\s\S]*?<\/section>/', $html, $strip);
+
+    foreach (ConnectableAssistant::cases() as $assistant) {
+        expect($strip[0])->toContain('href="'.route($assistant->routeName()).'"');
+    }
+});
+
 it('names the assistant from config in both the header and the footer', function (): void {
     config()->set('chat.assistant_name', 'Testbot');
 
