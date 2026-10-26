@@ -597,9 +597,9 @@ it('keeps an Enterprise grant managed after an older subscription ended', functi
         ->assertDontSee('From $20,000 / year');
 });
 
-it('keeps Enterprise access clear while an older Pro subscription is canceling', function (): void {
+it('keeps a managed plan clear while an older Pro subscription is canceling', function (Plan $plan): void {
     [, $workspace] = billingPageOwner();
-    $workspace->forceFill(['plan' => Plan::Enterprise, 'trial_ends_at' => now()->addDays(5)])->save();
+    $workspace->forceFill(['plan' => $plan, 'trial_ends_at' => now()->addDays(5)])->save();
     $workspace->subscriptions()->create([
         'type' => 'default',
         'stripe_id' => 'sub_enterprise_old_grace',
@@ -614,11 +614,11 @@ it('keeps Enterprise access clear while an older Pro subscription is canceling',
         ->assertSee('Your current plan is unchanged.')
         ->assertDontSee('After that, workspace access pauses.')
         ->assertDontSee(__('billing.trial.active_title'));
-});
+})->with([Plan::Enterprise, Plan::Concierge]);
 
-it('shows the Enterprise allowance when an older Pro subscription is past due', function (): void {
+it('keeps the managed allowance when an older Pro subscription is past due', function (Plan $plan): void {
     [, $workspace] = billingPageOwner();
-    $workspace->forceFill(['plan' => Plan::Enterprise])->save();
+    $workspace->forceFill(['plan' => $plan])->save();
     $workspace->subscriptions()->create([
         'type' => 'default',
         'stripe_id' => 'sub_enterprise_old_due',
@@ -628,10 +628,10 @@ it('shows the Enterprise allowance when an older Pro subscription is past due', 
     ]);
 
     livewire(Billing::class)
-        ->assertSee('/ 10,000')
+        ->assertSee('/ '.number_format($plan->credits()))
         ->assertSee('Your previous subscription has a payment issue.')
         ->assertDontSee(__('billing.manage.past_due_body'));
-});
+})->with([Plan::Enterprise, Plan::Concierge]);
 
 it('identifies a manually managed Pro plan without calling it Enterprise', function (): void {
     [, $workspace] = billingPageOwner();
