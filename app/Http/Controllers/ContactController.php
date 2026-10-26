@@ -18,7 +18,8 @@ final readonly class ContactController
 {
     public function show(Request $request): View
     {
-        $plan = Plan::tryFrom($request->string('plan')->toString());
+        $requestedPlan = $request->query('plan');
+        $plan = is_string($requestedPlan) ? Plan::tryFrom($requestedPlan) : null;
 
         return view('contact', [
             'inquiryPlan' => $plan?->isManaged() === true && Feature::active(Billing::class) ? $plan : null,

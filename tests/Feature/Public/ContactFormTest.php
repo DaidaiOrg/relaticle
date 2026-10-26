@@ -37,6 +37,15 @@ it('carries the Concierge offer into the inquiry form', function (): void {
         ->assertSee('How we sell today:');
 });
 
+it('treats a malformed plan parameter as a general contact', function (): void {
+    Feature::define(BillingFeature::class, true);
+
+    $this->get('/contact?plan[]=concierge')
+        ->assertOk()
+        ->assertSee('Get in touch')
+        ->assertDontSee('Let’s set up your Concierge workspace');
+});
+
 it('treats a self-serve plan as a general contact', function (): void {
     Feature::define(BillingFeature::class, true);
 
