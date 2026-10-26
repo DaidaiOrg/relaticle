@@ -48,6 +48,7 @@
         }
     "
     x-on:go-to-wizard-step.window="$event.detail.key === @js($key) && goToStep($event.detail.step)"
+    x-init="$watch('step', () => $nextTick(() => $el.querySelector('.fi-sc-wizard-step.fi-active h1')?.focus({ preventScroll: true })))"
     {{-- Enter advances the step; on the last one it submits via requestSubmit
          so native validation still runs. Without this the wizard was mouse-only. --}}
     x-on:keydown.enter="

@@ -253,7 +253,7 @@ final class CreateWorkspace extends RegisterTenant
 
     private function stepHeading(string $title, string ...$paragraphs): HtmlString
     {
-        $html = '<h3 class="text-xl font-bold tracking-tight text-gray-950 dark:text-white">'.e($title).'</h3>';
+        $html = '<h1 tabindex="-1" class="text-xl font-bold tracking-tight text-gray-950 outline-none dark:text-white">'.e($title).'</h1>';
 
         foreach ($paragraphs as $index => $paragraph) {
             $spacing = $index === 0 ? 'mt-1' : 'mt-2';
