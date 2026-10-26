@@ -418,6 +418,27 @@ it('shows enterprise manual state without upgrade actions', function (): void {
         ->assertDontSee(__('billing.upgrade.button'));
 });
 
+it('shows Concierge as a managed plan with its allowance and no upgrade actions', function (): void {
+    [, $workspace] = billingPageOwner();
+    $workspace->forceFill(['plan' => Plan::Concierge])->save();
+
+    livewire(Billing::class)
+        ->assertSee(__('billing.plans.cloud_concierge'))
+        ->assertSee(__('billing.managed.title'))
+        ->assertSee('/ '.number_format(Plan::Concierge->credits()))
+        ->assertDontSee(__('billing.plans.cloud_pro'))
+        ->assertDontSee(__('billing.upgrade.button'));
+});
+
+it('shows a managed plan, not a pending activation, when a checkout returns', function (Plan $plan): void {
+    [, $workspace] = billingPageOwner();
+    $workspace->forceFill(['plan' => $plan])->save();
+
+    livewire(Billing::class, ['checkout' => Billing::CHECKOUT_SUCCESS])
+        ->assertSee(__('billing.status.managed'))
+        ->assertDontSee(__('billing.upgrade.activating'));
+})->with([Plan::Enterprise, Plan::Concierge]);
+
 it('renders read-only info for members', function (): void {
     config()->set('services.stripe.credit_packs.small', ['price' => 'price_credits_1k_test', 'credits' => 1000]);
     [, $workspace] = billingPageOwner();
@@ -585,9 +606,9 @@ it('keeps an Enterprise grant managed after an older subscription ended', functi
         ->assertDontSee('From $20,000 / year');
 });
 
-it('keeps Enterprise access clear while an older Pro subscription is canceling', function (): void {
+it('keeps a managed plan clear while an older Pro subscription is canceling', function (Plan $plan): void {
     [, $workspace] = billingPageOwner();
-    $workspace->forceFill(['plan' => Plan::Enterprise, 'trial_ends_at' => now()->addDays(5)])->save();
+    $workspace->forceFill(['plan' => $plan, 'trial_ends_at' => now()->addDays(5)])->save();
     $workspace->subscriptions()->create([
         'type' => 'default',
         'stripe_id' => 'sub_enterprise_old_grace',
@@ -599,14 +620,14 @@ it('keeps Enterprise access clear while an older Pro subscription is canceling',
 
     livewire(Billing::class)
         ->assertSee(__('billing.status.managed'))
-        ->assertSee('Your Enterprise access is unchanged.')
+        ->assertSee('Your current plan is unchanged.')
         ->assertDontSee('After that, workspace access pauses.')
         ->assertDontSee(__('billing.trial.active_title'));
-});
+})->with([Plan::Enterprise, Plan::Concierge]);
 
-it('shows the Enterprise allowance when an older Pro subscription is past due', function (): void {
+it('keeps the managed allowance when an older Pro subscription is past due', function (Plan $plan): void {
     [, $workspace] = billingPageOwner();
-    $workspace->forceFill(['plan' => Plan::Enterprise])->save();
+    $workspace->forceFill(['plan' => $plan])->save();
     $workspace->subscriptions()->create([
         'type' => 'default',
         'stripe_id' => 'sub_enterprise_old_due',
@@ -616,10 +637,10 @@ it('shows the Enterprise allowance when an older Pro subscription is past due', 
     ]);
 
     livewire(Billing::class)
-        ->assertSee('/ 10,000')
+        ->assertSee('/ '.number_format($plan->credits()))
         ->assertSee('Your previous subscription has a payment issue.')
         ->assertDontSee(__('billing.manage.past_due_body'));
-});
+})->with([Plan::Enterprise, Plan::Concierge]);
 
 it('identifies a manually managed Pro plan without calling it Enterprise', function (): void {
     [, $workspace] = billingPageOwner();

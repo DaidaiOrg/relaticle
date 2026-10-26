@@ -2,7 +2,7 @@
 title: Billing and plans
 description: Relaticle Cloud is priced per workspace, never per seat. Trials, subscriptions, credits, and pausing explained.
 order: 3
-updated: "2026-10-05"
+updated: "2026-10-26"
 related: [help/ai-assistant/ai-credits-and-limits, help/workspace/rename-or-delete-your-workspace]
 ---
 
@@ -18,6 +18,15 @@ credits a month, premium AI models, the REST API and MCP server, and email
 support. It costs **$19/mo per workspace billed yearly** ($228 a year), or
 **$24/mo billed monthly**. For larger rollouts, Enterprise implementation
 starts at $20,000 a year. The [pricing page](/pricing) has the details.
+
+## Cloud Concierge
+
+Cloud Concierge is Cloud Pro with the setup done for you. We design your
+pipeline and fields around how you sell, move your existing data in, and walk
+your team through it. After that, we make up to 5 changes a month, each within
+one business day. It includes 5,000 AI credits a month and costs **$708 a year
+per workspace**, invoiced yearly. Ask for it from the [pricing page](/pricing).
+Setup starts once the invoice is paid.
 
 ## The trial
 

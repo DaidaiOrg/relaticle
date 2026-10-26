@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Livewire\App\Billing;
 
 use App\Actions\Billing\CreateProCheckout;
-use App\Enums\Plan;
 use App\Enums\WorkspaceCapability;
 use App\Features\Billing as BillingFeature;
 use App\Models\User;
@@ -55,7 +54,7 @@ final class UpgradeModal extends Component
             && $user instanceof User
             && $user->hasWorkspaceCapability($workspace->getKey(), WorkspaceCapability::BillingManage)
             && ! $workspace->subscribed()
-            && $workspace->plan !== Plan::Enterprise;
+            && ! $workspace->plan->isManaged();
     }
 
     public function render(): View

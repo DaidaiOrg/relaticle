@@ -2,7 +2,7 @@
 title: AI credits and rate limits
 description: How assistant messages spend credits, what each plan includes monthly, and what happens at zero.
 order: 4
-updated: "2026-10-05"
+updated: "2026-10-26"
 related: [help/ai-assistant/choose-an-ai-model, help/workspace/billing-and-plans]
 ---
 
@@ -24,6 +24,7 @@ final cost settles after the answer completes.
 | Plan | Credits per month | Messages per minute |
 |------|-------------------|---------------------|
 | Cloud Pro and its trial | 2,000 | 30 |
+| Cloud Concierge | 5,000 | 30 |
 | Enterprise | Agreed with your team | Agreed with your team |
 | Self-hosted (default) | 300 | 10 |
 

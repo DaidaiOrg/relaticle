@@ -27,6 +27,34 @@ it('carries the Enterprise offer into the inquiry form', function (): void {
         ->assertSee('Workflow and integrations we need:');
 });
 
+it('carries the Concierge offer into the inquiry form', function (): void {
+    Feature::define(BillingFeature::class, true);
+
+    $this->get('/contact?plan=concierge')
+        ->assertSee('Let’s set up your Concierge workspace')
+        ->assertSee('$708 / year')
+        ->assertSee('Setup starts once the invoice is paid.')
+        ->assertSee('How we sell today:');
+});
+
+it('treats a malformed plan parameter as a general contact', function (): void {
+    Feature::define(BillingFeature::class, true);
+
+    $this->get('/contact?plan[]=concierge')
+        ->assertOk()
+        ->assertSee('Get in touch')
+        ->assertDontSee('Let’s set up your Concierge workspace');
+});
+
+it('treats a self-serve plan as a general contact', function (): void {
+    Feature::define(BillingFeature::class, true);
+
+    $this->get('/contact?plan=pro')
+        ->assertSee('Get in touch')
+        ->assertDontSee('Let’s set up your Concierge workspace')
+        ->assertDontSee('Let’s plan your Enterprise workspace');
+});
+
 it('preserves the visitor message when an Enterprise inquiry fails validation', function (): void {
     Mail::fake();
     Feature::define(BillingFeature::class, true);

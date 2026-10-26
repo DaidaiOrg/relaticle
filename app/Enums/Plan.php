@@ -11,6 +11,7 @@ enum Plan: string implements HasColor, HasLabel
 {
     case Free = 'free';
     case Pro = 'pro';
+    case Concierge = 'concierge';
     case Enterprise = 'enterprise';
 
     public static function default(): self
@@ -89,6 +90,7 @@ enum Plan: string implements HasColor, HasLabel
         return match ($this) {
             self::Free => 'Free',
             self::Pro => 'Pro',
+            self::Concierge => 'Concierge',
             self::Enterprise => 'Enterprise',
         };
     }
@@ -98,6 +100,7 @@ enum Plan: string implements HasColor, HasLabel
         return match ($this) {
             self::Free => 'gray',
             self::Pro => 'success',
+            self::Concierge => 'info',
             self::Enterprise => 'primary',
         };
     }
@@ -107,6 +110,7 @@ enum Plan: string implements HasColor, HasLabel
         return match ($this) {
             self::Free => 300,
             self::Pro => 2_000,
+            self::Concierge => 5_000,
             self::Enterprise => 10_000,
         };
     }
@@ -116,6 +120,7 @@ enum Plan: string implements HasColor, HasLabel
         return match ($this) {
             self::Free => 10,
             self::Pro => 30,
+            self::Concierge => 30,
             self::Enterprise => 60,
         };
     }
@@ -125,7 +130,18 @@ enum Plan: string implements HasColor, HasLabel
         return match ($this) {
             self::Free => 0,
             self::Pro => 1,
-            self::Enterprise => 2,
+            self::Concierge => 2,
+            self::Enterprise => 3,
+        };
+    }
+
+    // Granted by hand and invoiced outside Stripe Managed Payments, which cannot sell a
+    // plan that includes human service, so no Stripe subscription may replace one.
+    public function isManaged(): bool
+    {
+        return match ($this) {
+            self::Free, self::Pro => false,
+            self::Concierge, self::Enterprise => true,
         };
     }
 }

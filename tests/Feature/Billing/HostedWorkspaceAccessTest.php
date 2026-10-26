@@ -72,6 +72,16 @@ it('allows a workspace with a managed Enterprise grant', function (): void {
         ->assertOk();
 });
 
+it('allows a Concierge grant whose old trial date has passed', function (): void {
+    $this->workspace->forceFill([
+        'plan' => Plan::Concierge,
+        'trial_ends_at' => now()->subMinute(),
+    ])->save();
+
+    $this->get(route('filament.app.pages.dashboard', ['tenant' => $this->workspace->slug]))
+        ->assertOk();
+});
+
 it('allows a workspace with a valid subscription', function (): void {
     $this->workspace->subscriptions()->create([
         'type' => 'default',

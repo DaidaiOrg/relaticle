@@ -3,33 +3,41 @@
     description="Get in touch with the Relaticle team. Questions about enterprise deployments, custom integrations, or partnerships."
     ogTitle="Contact: Deployments and integrations - Relaticle"
 >
+    @php
+        $inquiry = $inquiryPlan?->value;
+        $inquiryPrice = match ($inquiryPlan) {
+            \App\Enums\Plan::Enterprise => __('billing.enterprise.starting_price', ['price' => number_format(config('relaticle.enterprise.starting_price_yearly'))]),
+            \App\Enums\Plan::Concierge => __('billing.concierge.price', ['price' => number_format(config('relaticle.concierge.price_yearly'))]),
+            default => null,
+        };
+    @endphp
     <section class="pt-28 pb-20 sm:pt-32 sm:pb-24 bg-white dark:bg-gray-950">
 
         <div class="relative max-w-5xl mx-auto px-6 lg:px-8">
             <div class="grid grid-cols-1 gap-10 lg:grid-cols-5 lg:gap-16">
 
                 <div class="lg:col-span-2">
-                    @if($enterpriseInquiry)
+                    @if($inquiry)
                         <a href="{{ route('pricing') }}" class="mb-6 inline-flex items-center gap-2 text-sm text-gray-600 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary dark:text-gray-400 dark:hover:text-primary-300">
                             <x-ri-arrow-left-line class="size-4" />
                             {{ __('Back to pricing') }}
                         </a>
                     @endif
                     <h1 class="font-display text-3xl sm:text-4xl font-bold text-gray-950 dark:text-white tracking-tight leading-tight">
-                        {{ $enterpriseInquiry ? __('billing.inquiry.title') : __('Get in touch') }}
+                        {{ $inquiry ? __("billing.inquiry.{$inquiry}.title") : __('Get in touch') }}
                     </h1>
                     <p class="mt-5 text-base text-gray-500 dark:text-gray-400 leading-relaxed max-w-sm">
-                        {{ $enterpriseInquiry ? __('billing.inquiry.body') : __('Questions about deployments, integrations, or partnerships? Get in touch with our team.') }}
+                        {{ $inquiry ? __("billing.inquiry.{$inquiry}.body") : __('Questions about deployments, integrations, or partnerships? Get in touch with our team.') }}
                     </p>
 
-                    @if($enterpriseInquiry)
+                    @if($inquiry)
                         <div class="mt-6 border-t border-[var(--surface-card-border)] pt-6">
-                            <p class="font-display text-xl font-semibold text-gray-950 dark:text-white">{{ __('billing.enterprise.starting_price', ['price' => number_format(config('relaticle.enterprise.starting_price_yearly'))]) }}</p>
-                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ __('billing.enterprise.terms') }}</p>
+                            <p class="font-display text-xl font-semibold text-gray-950 dark:text-white">{{ $inquiryPrice }}</p>
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ __("billing.{$inquiry}.terms") }}</p>
                         </div>
                     @endif
 
-                    @if(! $enterpriseInquiry)
+                    @if(! $inquiry)
                     <div class="mt-8 space-y-4">
                         @feature(App\Features\Documentation::class)
                         <a href="{{ route('help.index') }}" class="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary-400 transition-colors">
@@ -63,7 +71,7 @@
                             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ session('success') }}</p>
                         </div>
                     @else
-                        <form method="POST" action="{{ route('contact', $enterpriseInquiry ? ['plan' => 'enterprise'] : []) }}" class="space-y-6">
+                        <form method="POST" action="{{ route('contact', $inquiry ? ['plan' => $inquiry] : []) }}" class="space-y-6">
                             @csrf
                             <x-honeypot />
 
@@ -73,10 +81,10 @@
 
                             <x-marketing.input label="Company" type="text" name="company" id="company" autocomplete="organization" :value="old('company')" placeholder="Your company"/>
 
-                            <x-marketing.textarea :label="$enterpriseInquiry ? __('billing.inquiry.message_label') : __('How can we help?')" :required="true" name="message" id="message" :rows="$enterpriseInquiry ? 8 : 5" required placeholder="Tell us about your project, team size, and any specific requirements...">{{ old('message', $enterpriseInquiry ? __('billing.inquiry.message') : '') }}</x-marketing.textarea>
+                            <x-marketing.textarea :label="$inquiry ? __('billing.inquiry.'.$inquiry.'.message_label') : __('How can we help?')" :required="true" name="message" id="message" :rows="$inquiry ? 8 : 5" required placeholder="Tell us about your project, team size, and any specific requirements...">{{ old('message', $inquiry ? __("billing.inquiry.{$inquiry}.message") : '') }}</x-marketing.textarea>
 
                             <x-marketing.button type="submit" class="w-full sm:w-auto focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
-                                {{ $enterpriseInquiry ? __('billing.inquiry.submit') : __('Send message') }}
+                                {{ $inquiry ? __("billing.inquiry.{$inquiry}.submit") : __('Send message') }}
                             </x-marketing.button>
                         </form>
                     @endif

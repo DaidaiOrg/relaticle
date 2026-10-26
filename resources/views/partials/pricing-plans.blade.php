@@ -1,9 +1,9 @@
-<div x-data="{ yearly: true }" class="mx-auto max-w-4xl">
+<div x-data="{ yearly: true }" class="mx-auto max-w-6xl">
     <div class="mb-8 flex justify-center">
         <x-billing.interval-toggle />
     </div>
 
-    <div id="pricing-plans" class="grid gap-5 md:grid-cols-2">
+    <div id="pricing-plans" class="grid gap-5 lg:grid-cols-3">
         <section class="relative flex flex-col rounded-2xl border border-primary-300 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_-10px_rgba(124,58,237,0.25)] dark:border-primary-400/40 dark:bg-white/[0.03] dark:shadow-none">
             <div class="p-6 sm:p-8">
                 <div class="flex items-center justify-between gap-3">
@@ -13,9 +13,9 @@
                         </div>
                         <h2 class="font-display text-xl font-semibold tracking-tight text-gray-950 dark:text-white">{{ __('billing.plans.cloud_pro') }}</h2>
                     </div>
-                    <span class="shrink-0 rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-white">{{ __('Recommended') }}</span>
+                    <span class="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-white">{{ __('Recommended') }}</span>
                 </div>
-                <p class="mt-4 min-h-10 text-sm leading-5 text-gray-600 dark:text-gray-400">{{ __('A ready-to-use CRM for your whole team. Hosting included.') }}</p>
+                <p class="mt-4 text-sm leading-5 text-gray-600 dark:text-gray-400">{{ __('The whole CRM, hosted for you.') }}</p>
 
                 <div class="mt-8">
                     <p class="text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Per workspace') }}</p>
@@ -42,7 +42,46 @@
                         </li>
                     @endforeach
                 </ul>
-                <p class="mt-auto pt-6 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ __('Need more AI credits? Prepaid top-ups are available.') }}</p>
+                <p class="mt-auto pt-6 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ __('Top up AI credits anytime.') }}</p>
+            </div>
+        </section>
+
+        <section id="concierge-plan" class="flex flex-col rounded-2xl border border-gray-200/80 bg-white dark:border-white/[0.08] dark:bg-white/[0.02]">
+            <div class="p-6 sm:p-8">
+                <div class="flex items-center gap-3">
+                    <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-white/[0.06]">
+                        <x-ri-user-star-line class="size-5 text-gray-700 dark:text-gray-300" />
+                    </div>
+                    <h2 class="font-display text-xl font-semibold tracking-tight text-gray-950 dark:text-white">{{ __('billing.plans.cloud_concierge') }}</h2>
+                </div>
+                <p class="mt-4 text-sm leading-5 text-gray-600 dark:text-gray-400">{{ __('billing.concierge.tagline') }}</p>
+
+                <div class="mt-8">
+                    <p class="text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Per workspace') }}</p>
+                    <p class="mt-2 flex items-baseline gap-1.5">
+                        <span class="font-display text-5xl font-bold tracking-[-0.03em] text-gray-950 dark:text-white">${{ number_format(config('relaticle.concierge.price_yearly') / 12) }}</span>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">{{ __('/ month') }}</span>
+                    </p>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400" x-text="yearly ? @js(__('billing.concierge.billed_yearly', ['price' => $conciergePrice])) : @js(__('billing.concierge.yearly_only'))">{{ __('billing.concierge.billed_yearly', ['price' => $conciergePrice]) }}</p>
+                </div>
+
+                <x-marketing.button variant="secondary" :href="route('contact', ['plan' => 'concierge'])" class="mt-8 w-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
+                    {{ __('billing.concierge.contact') }}
+                </x-marketing.button>
+                <p class="mt-3 text-center text-xs text-gray-500 dark:text-gray-400">{{ __('billing.concierge.terms') }}</p>
+            </div>
+
+            <div class="flex flex-1 flex-col border-t border-gray-100 p-6 dark:border-white/[0.06] sm:px-8">
+                <p class="mb-4 text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('billing.concierge.includes') }}</p>
+                <ul class="space-y-3">
+                    @foreach([__('billing.concierge.credits', ['credits' => $conciergeCredits]), ...__('billing.concierge.features')] as $feature)
+                        <li class="flex items-start gap-3 text-sm leading-5 text-gray-700 dark:text-gray-300">
+                            <x-ri-check-line class="mt-0.5 size-4 shrink-0 text-gray-400 dark:text-gray-500" />
+                            {{ $feature }}
+                        </li>
+                    @endforeach
+                </ul>
+                <p class="mt-auto pt-6 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ __('billing.concierge.footnote') }}</p>
             </div>
         </section>
 
@@ -54,7 +93,7 @@
                     </div>
                     <h2 class="font-display text-xl font-semibold tracking-tight text-gray-950 dark:text-white">{{ __('billing.plans.enterprise') }}</h2>
                 </div>
-                <p class="mt-4 min-h-10 text-sm leading-5 text-gray-600 dark:text-gray-400">{{ __('billing.enterprise.tagline') }}</p>
+                <p class="mt-4 text-sm leading-5 text-gray-600 dark:text-gray-400">{{ __('billing.enterprise.tagline') }}</p>
 
                 <div class="mt-8" aria-label="{{ __('billing.enterprise.starting_price', ['price' => $enterprisePrice]) }}">
                     <p class="text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('Starting at') }}</p>
