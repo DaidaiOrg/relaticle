@@ -13,7 +13,7 @@
     // Coalesced rather than defaulted through @props: callers pass the prop
     // through explicitly, so a null from an inner layout must still fall back
     // here instead of emitting an empty description.
-    $description ??= 'Relaticle - The open-source CRM built for people and AI-powered work. Self-hosted, with a built-in AI assistant and custom fields.';
+    $description ??= 'Relaticle - The open-source AI CRM for selling without a sales team, with a built-in AI assistant and custom fields.';
     $ogType ??= 'website';
 @endphp
 
@@ -32,7 +32,7 @@
 @php
     // Bump the version whenever public/images/open-graph.jpg is regenerated
     // so social caches re-scrape it.
-    $defaultOgImage = url('/images/open-graph.jpg').'?v=2';
+    $defaultOgImage = url('/images/open-graph.jpg').'?v=3';
 @endphp
 
 <!-- Open Graph Meta Tags -->
@@ -54,7 +54,7 @@
 <meta name="twitter:image" content="{{ $ogImage ?? $defaultOgImage }}" />
 <meta name="twitter:image:alt" content="{{ $ogTitle ?? $title ?? config('app.name', 'Relaticle') }}" />
 
-<title>{{ $title ?? config('app.name', 'Relaticle - CRM Built for People and AI-Powered Work') }}</title>
+<title>{{ $title ?? config('app.name', 'Relaticle - Open-Source AI CRM for Claude and ChatGPT') }}</title>
 <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="shortcut icon" href="/favicon.ico" />
