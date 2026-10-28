@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Relaticle\Chat\Services;
 
 use App\Actions\Chat\SeedWorkspaceCreditBalance;
+use App\Enums\BillingStatus;
 use App\Enums\Plan;
 use App\Models\User;
 use App\Models\Workspace;
@@ -473,6 +474,10 @@ final readonly class CreditService
         $workspace->loadMissing('subscriptions');
 
         if (! $workspace->plan->isManaged() && $workspace->subscription()?->pastDue() === true) {
+            return Plan::Free->credits();
+        }
+
+        if ($workspace->billingStatus() === BillingStatus::TrialEnded) {
             return Plan::Free->credits();
         }
 
