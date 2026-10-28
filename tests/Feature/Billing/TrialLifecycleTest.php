@@ -14,9 +14,11 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Mail;
 use Relaticle\Chat\Models\AiCreditBalance;
 use Relaticle\Chat\Models\AiCreditTransaction;
+use Relaticle\Chat\Services\CreditService;
 
 mutates(StartProTrial::class);
 mutates(ProcessTrialsCommand::class);
+mutates(CreditService::class);
 
 /** @return array{0: User, 1: Workspace} */
 function trialOwnerAndWorkspace(): array
@@ -297,6 +299,43 @@ it('grants exactly one allowance for a trial that crosses a month boundary', fun
         ->where('metadata->action', 'reset_period')
         ->count();
     expect($grants)->toBe(1);
+});
+
+it('grants no second pro allowance when the hourly reset runs before the nightly downgrade', function (): void {
+    $this->travelTo(new DateTimeImmutable('2026-06-10 03:00:00', new DateTimeZone('UTC')));
+
+    [$user, $workspace] = trialOwnerAndWorkspace();
+    app(StartProTrial::class)->execute($user, $workspace);
+
+    $this->travelTo(new DateTimeImmutable('2026-06-24 04:00:00', new DateTimeZone('UTC')));
+    $this->artisan('chat:reset-credits')->assertSuccessful();
+
+    $balance = AiCreditBalance::query()->where('workspace_id', $workspace->getKey())->sole();
+
+    expect($workspace->refresh()->plan)->toBe(Plan::Pro)
+        ->and($balance->credits_remaining)->toBe(Plan::Free->credits());
+});
+
+it('keeps the pro allowance for an expired trial that converted to a subscription', function (): void {
+    [, $workspace] = trialOwnerAndWorkspace();
+    $workspace->forceFill(['plan' => Plan::Pro, 'trial_ends_at' => now()->subHour()])->save();
+    $workspace->subscriptions()->create([
+        'type' => 'default',
+        'stripe_id' => 'sub_live',
+        'stripe_status' => 'active',
+        'stripe_price' => 'price_pro_monthly_test',
+        'quantity' => 1,
+    ]);
+
+    AiCreditBalance::query()
+        ->where('workspace_id', $workspace->getKey())
+        ->update(['period_ends_at' => now()->subHour()]);
+
+    $this->artisan('chat:reset-credits')->assertSuccessful();
+
+    $balance = AiCreditBalance::query()->where('workspace_id', $workspace->getKey())->sole();
+
+    expect($balance->credits_remaining)->toBe(Plan::Pro->credits());
 });
 
 it('downgrades two or more expired trials in a single chunked run', function (): void {
