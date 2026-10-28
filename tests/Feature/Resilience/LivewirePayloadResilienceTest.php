@@ -115,7 +115,7 @@ it('responds 419 and does not report an update to an unknown property', function
 it('responds 419 and does not report a direct call to a lifecycle hook', function (): void {
     Exceptions::fake();
 
-    postTamperedLivewireUpdate($this, [], [['method' => 'mount', 'params' => [], 'metadata' => []]])->assertStatus(419);
+    postTamperedLivewireUpdate($this, [], [['method' => 'boot', 'params' => [], 'metadata' => []]])->assertStatus(419);
 
     Exceptions::assertNotReported(DirectlyCallingLifecycleHooksNotAllowedException::class);
 });
