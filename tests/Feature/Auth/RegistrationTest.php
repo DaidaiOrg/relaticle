@@ -174,6 +174,41 @@ it('never treats a whitelisted domain as disposable, even when the upstream list
     'jane-whitelisted@relaticle.com',
 ]);
 
+it('rejects a signup from a domain only the local disposable list carries', function (): void {
+    $storagePath = storage_path('framework/testing/disposable-domains-local.json');
+    $localSources = collect(config('disposable-email.sources'))
+        ->reject(fn (string $source): bool => Str::startsWith($source, 'https://'))
+        ->values()
+        ->all();
+
+    config([
+        'disposable-email.sources' => $localSources,
+        'disposable-email.storage' => $storagePath,
+        'disposable-email.cache.enabled' => false,
+    ]);
+
+    app()->forgetInstance('disposable_email.domains');
+    DisposableDomains::clearResolvedInstance('disposable_email.domains');
+
+    $email = 'setv'.Str::lower(Str::random(10)).'@mailsink.org';
+
+    try {
+        $this->artisan('disposable:update')->assertSuccessful();
+
+        livewire(Login::class)
+            ->fillForm(['email' => $email])
+            ->call('authenticate')
+            ->assertSet('authMethod', 'signup')
+            ->fillForm(['password' => 'Password123!'])
+            ->call('authenticate')
+            ->assertHasFormErrors(['email' => 'indisposable']);
+    } finally {
+        File::delete($storagePath);
+    }
+
+    expect(User::where('email', $email)->exists())->toBeFalse();
+});
+
 it('rejects a signup submitted faster than a human could type', function (): void {
     config(['honeypot.enabled' => true]);
     $this->freezeTime();
