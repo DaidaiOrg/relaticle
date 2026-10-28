@@ -25,6 +25,7 @@ final class PestTiaRuntime
         'composer.json' => 'tests/Arch',
         'packages/*/resources/css/**' => 'tests/Arch',
         'resources/css/**' => 'tests/Arch',
+        'resources/data/disposable-email-domains.json' => 'tests/Feature/Auth/RegistrationTest.php',
         'phpstan*.neon' => 'tests/Arch',
         'phpunit*.xml' => 'tests/Arch',
     ];
