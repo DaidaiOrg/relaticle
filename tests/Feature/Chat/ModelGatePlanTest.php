@@ -300,7 +300,7 @@ it('refuses a premium model during a trial while the workspace holds only sample
     startTrial($user->currentWorkspace);
     Company::factory()->create([
         'workspace_id' => $user->currentWorkspace->getKey(),
-        'creation_source' => CreationSource::SYSTEM,
+        'creation_source' => CreationSource::SAMPLE,
     ]);
 
     $response = $this->actingAs($user)->postJson('/chat/'.seedGateConversation($user), [
@@ -408,4 +408,36 @@ it('keeps Auto on the premium model for a paid Pro workspace', function (): void
         ProcessChatMessage::class,
         fn (ProcessChatMessage $job): bool => (fn (): array => $this->resolved)->call($job)['id'] === 'claude-opus-5',
     );
+});
+
+it('gives a Concierge workspace every Pro model and keeps Enterprise-only models locked', function (): void {
+    Queue::fake();
+    $user = User::factory()->withPersonalWorkspace()->create();
+    config()->set('chat.models', [
+        ChatCatalog::entry(),
+        ChatCatalog::entry(['label' => 'Opus 5', 'model' => 'claude-opus-5', 'min_plan' => 'pro']),
+        ChatCatalog::entry(['label' => 'GPT 5.5 Pro', 'provider' => 'openai', 'model' => 'gpt-5.5-pro', 'min_plan' => 'enterprise']),
+    ]);
+    app()->forgetInstance(ModelRegistry::class);
+    $user->currentWorkspace->forceFill(['plan' => Plan::Concierge])->save();
+    AiCreditBalance::query()->updateOrCreate(['workspace_id' => $user->currentWorkspace->getKey()], [
+        'credits_remaining' => 100,
+        'credits_used' => 0,
+        'period_starts_at' => now()->startOfMonth(),
+        'period_ends_at' => now()->endOfMonth(),
+    ]);
+
+    $this->actingAs($user)->postJson('/chat/'.seedGateConversation($user), [
+        'document' => ChatDocument::fromText('hi'),
+        'model' => 'claude-opus-5',
+    ])->assertOk();
+
+    $this->actingAs($user)->postJson('/chat/'.seedGateConversation($user), [
+        'document' => ChatDocument::fromText('hi'),
+        'model' => 'gpt-5.5-pro',
+    ])->assertStatus(403)->assertJson([
+        'error' => 'model_not_allowed',
+        'message' => 'GPT 5.5 Pro is not available on the Concierge plan.',
+        'upgrade_available' => false,
+    ]);
 });

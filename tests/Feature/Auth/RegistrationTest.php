@@ -24,6 +24,46 @@ it('flags the session for signup analytics tracking on signup', function (): voi
     expect(session()->get('fathom.track_signup'))->toBeTrue();
 });
 
+it('names a user who signs up with a plus address without the tag', function (): void {
+    $email = 'jane.doe+trial-'.uniqid().'@gmail.com';
+
+    livewire(Login::class)
+        ->fillForm(['email' => $email])
+        ->call('authenticate')
+        ->fillForm(['password' => 'Password123!'])
+        ->call('authenticate');
+
+    expect(User::query()->where('email', $email)->sole()->name)->toBe('Jane Doe');
+});
+
+it('names a user whose address starts with a plus tag after the whole local part', function (): void {
+    $email = '+trial'.uniqid().'@gmail.com';
+
+    livewire(Login::class)
+        ->fillForm(['email' => $email])
+        ->call('authenticate')
+        ->fillForm(['password' => 'Password123!'])
+        ->call('authenticate')
+        ->assertHasNoFormErrors();
+
+    expect(User::query()->where('email', $email)->sole()->name)->toStartWith('+Trial');
+});
+
+it('throttles repeated signup submissions on one discovery', function (): void {
+    $component = livewire(Login::class)
+        ->fillForm(['email' => 'throttle-'.uniqid().'@gmail.com'])
+        ->call('authenticate')
+        ->assertSet('authMethod', 'signup');
+
+    foreach (range(1, 5) as $attempt) {
+        $component->fillForm(['password' => 'short'])->call('authenticate');
+    }
+
+    $component->fillForm(['password' => 'short'])
+        ->call('authenticate')
+        ->assertNotified(__('auth.login.signup_throttled_title'));
+});
+
 it('renders the signup event once and clears the flag', function (): void {
     $this->app['env'] = 'production';
     config(['services.fathom.site_id' => 'TESTSITE']);
@@ -48,6 +88,15 @@ it('keeps panel auth pages out of tenant-slug normalization', function (): void 
     expect($html)->toContain("'/register'")
         ->and($html)->toContain("'/login'")
         ->and($html)->toContain("'/email-verification'");
+});
+
+it('loads Fathom on the sign-in page', function (): void {
+    $this->app['env'] = 'production';
+    config(['services.fathom.site_id' => 'TESTSITE']);
+
+    $this->get(url()->getAppUrl('login'))
+        ->assertSuccessful()
+        ->assertSee('https://cdn.usefathom.com/script.js', escape: false);
 });
 
 it('rejects a signup from a disposable email domain', function (): void {
@@ -124,6 +173,41 @@ it('never treats a whitelisted domain as disposable, even when the upstream list
     'jane-whitelisted@gmail.com',
     'jane-whitelisted@relaticle.com',
 ]);
+
+it('rejects a signup from a domain only the local disposable list carries', function (): void {
+    $storagePath = storage_path('framework/testing/disposable-domains-local.json');
+    $localSources = collect(config('disposable-email.sources'))
+        ->reject(fn (string $source): bool => Str::startsWith($source, 'https://'))
+        ->values()
+        ->all();
+
+    config([
+        'disposable-email.sources' => $localSources,
+        'disposable-email.storage' => $storagePath,
+        'disposable-email.cache.enabled' => false,
+    ]);
+
+    app()->forgetInstance('disposable_email.domains');
+    DisposableDomains::clearResolvedInstance('disposable_email.domains');
+
+    $email = 'setv'.Str::lower(Str::random(10)).'@mailsink.org';
+
+    try {
+        $this->artisan('disposable:update')->assertSuccessful();
+
+        livewire(Login::class)
+            ->fillForm(['email' => $email])
+            ->call('authenticate')
+            ->assertSet('authMethod', 'signup')
+            ->fillForm(['password' => 'Password123!'])
+            ->call('authenticate')
+            ->assertHasFormErrors(['email' => 'indisposable']);
+    } finally {
+        File::delete($storagePath);
+    }
+
+    expect(User::where('email', $email)->exists())->toBeFalse();
+});
 
 it('rejects a signup submitted faster than a human could type', function (): void {
     config(['honeypot.enabled' => true]);

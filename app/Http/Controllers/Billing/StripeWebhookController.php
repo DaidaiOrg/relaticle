@@ -10,6 +10,7 @@ use App\Actions\Billing\RestoreWorkspaceTrial;
 use App\Enums\StripeSubscriptionStatus;
 use App\Models\Workspace;
 use Illuminate\Support\Facades\Log;
+use Laravel\Cashier\Cashier;
 use Laravel\Cashier\Http\Controllers\WebhookController as CashierWebhookController;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -60,6 +61,20 @@ final class StripeWebhookController extends CashierWebhookController
         }
 
         return $response;
+    }
+
+    /** @param  array<string, mixed>  $payload */
+    protected function handleCustomerSubscriptionUpdated(array $payload): Response
+    {
+        $stripeId = $payload['data']['object']['id'] ?? null;
+
+        // Stripe does not deliver events in order, so a late update would write an older
+        // price over a newer one. Cashier maps the subscription as Stripe holds it now.
+        if (is_string($stripeId)) {
+            $payload['data']['object'] = Cashier::stripe()->subscriptions->retrieve($stripeId)->toArray();
+        }
+
+        return parent::handleCustomerSubscriptionUpdated($payload);
     }
 
     /**

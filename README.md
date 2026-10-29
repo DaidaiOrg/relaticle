@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">The Open-Source CRM Built for People and AI-Powered Work</h1>
+<h1 align="center">The Open-Source AI CRM for Selling Without a Sales Team</h1>
 
 <p align="center">
   <a href="https://github.com/Relaticle/relaticle/actions/workflows/tests.yml?query=branch%3Amain"><img src="https://img.shields.io/github/actions/workflow/status/Relaticle/relaticle/tests.yml?branch=main&style=for-the-badge&label=tests" alt="Tests"></a>
@@ -19,7 +19,7 @@
   <a href="https://relaticle.com/docs">Documentation</a> ·
   <a href="https://relaticle.com/docs/mcp">MCP Server</a> ·
   <a href="https://github.com/orgs/Relaticle/projects/1/views/1">Roadmap</a> ·
-  <a href="https://github.com/Relaticle/relaticle/discussions">Discussions</a>
+  <a href="https://relaticle.com/discord">Discord</a>
 </p>
 
 <p align="center">
@@ -34,7 +34,7 @@
 
 Relaticle is a self-hosted CRM your AI agents can work in. Connect Claude, ChatGPT, or an open-source model over MCP to read, write, and analyze your CRM data. Custom fields, REST API, and multi-workspace isolation.
 
-**Perfect for:** Developer-led teams, AI-forward startups, and SMBs who want AI agent integration without vendor lock-in.
+**Built for:** people who sell to a named list of companies without a sales team. Connect Claude, ChatGPT, or your own agent to work in the CRM.
 
 **Core Strengths:**
 
@@ -86,9 +86,8 @@ Visit our [documentation](https://relaticle.com/docs) for guides on business usa
 # Community & Support
 
 - [Report Issues](https://github.com/Relaticle/relaticle/issues)
-- [Request Features](https://github.com/Relaticle/relaticle/discussions/categories/ideas)
-- [Ask Questions](https://github.com/Relaticle/relaticle/discussions/categories/q-a)
-- [Discord](https://discord.gg/relaticle)
+- [Request Features](https://relaticle.com/discord)
+- [Ask Questions](https://relaticle.com/discord)
 - [Star us on GitHub](https://github.com/Relaticle/relaticle) to support the project
 
 # License

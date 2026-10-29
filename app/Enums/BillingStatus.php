@@ -35,6 +35,8 @@ enum BillingStatus: string implements HasColor, HasDescription, HasLabel
 
     case Enterprise = 'enterprise';
 
+    case Concierge = 'concierge';
+
     case Trialing = 'trialing';
 
     case Grandfathered = 'grandfathered';
@@ -71,6 +73,10 @@ enum BillingStatus: string implements HasColor, HasDescription, HasLabel
 
         if ($workspace->plan === Plan::Enterprise) {
             return self::Enterprise;
+        }
+
+        if ($workspace->plan === Plan::Concierge) {
+            return self::Concierge;
         }
 
         if ($workspace->onGenericTrial()) {
@@ -127,10 +133,37 @@ enum BillingStatus: string implements HasColor, HasDescription, HasLabel
         return $this->constrain($query);
     }
 
+    /**
+     * @param  Builder<Workspace>  $query
+     * @return Builder<Workspace>
+     */
+    public static function grantingAccess(Builder $query): Builder
+    {
+        $outrankingDenials = [];
+
+        foreach (self::cases() as $case) {
+            if (! $case->grantsAccess()) {
+                $outrankingDenials[] = $case;
+
+                continue;
+            }
+
+            $query->orWhere(function (Builder $status) use ($case, $outrankingDenials): void {
+                foreach ($outrankingDenials as $denial) {
+                    $status->whereNot(fn (Builder $denied): Builder => $denial->constrain($denied));
+                }
+
+                $case->constrain($status);
+            });
+        }
+
+        return $query;
+    }
+
     public function grantsAccess(): bool
     {
         return match ($this) {
-            self::PastDue, self::Subscribed, self::Enterprise, self::Trialing, self::Grandfathered, self::Granted => true,
+            self::PastDue, self::Subscribed, self::Enterprise, self::Concierge, self::Trialing, self::Grandfathered, self::Granted => true,
             self::SubscriptionEnded, self::TrialEnded, self::Free => false,
         };
     }
@@ -141,6 +174,7 @@ enum BillingStatus: string implements HasColor, HasDescription, HasLabel
             self::PastDue => 'Past due',
             self::Subscribed => 'Pro',
             self::Enterprise => 'Enterprise',
+            self::Concierge => 'Concierge',
             self::Trialing => 'Trial',
             self::Grandfathered => 'Free (legacy)',
             self::SubscriptionEnded => 'Subscription ended',
@@ -161,6 +195,7 @@ enum BillingStatus: string implements HasColor, HasDescription, HasLabel
             self::PastDue => 'Paid subscription whose latest charge failed. Access stays open until Stripe cancels it.',
             self::Subscribed => 'Paying for Pro through a live Stripe subscription.',
             self::Enterprise => 'Put on the Enterprise plan by hand. No self-serve price exists for it.',
+            self::Concierge => 'Put on the Concierge plan by hand and invoiced outside Stripe Managed Payments.',
             self::Trialing => 'Running an unexpired Pro trial. Nothing has been charged yet.',
             self::Grandfathered => 'Existed before billing shipped, so hosted access stays free for good.',
             self::SubscriptionEnded => 'Paid subscription ended with nothing behind it. Hosted access is paused until the owner subscribes again.',
@@ -175,7 +210,7 @@ enum BillingStatus: string implements HasColor, HasDescription, HasLabel
         return match ($this) {
             self::PastDue, self::SubscriptionEnded, self::TrialEnded => 'danger',
             self::Subscribed => 'success',
-            self::Enterprise => 'primary',
+            self::Enterprise, self::Concierge => 'primary',
             self::Trialing => 'info',
             self::Grandfathered, self::Free => 'gray',
             self::Granted => 'warning',
@@ -184,7 +219,7 @@ enum BillingStatus: string implements HasColor, HasDescription, HasLabel
 
     /**
      * This status's own predicate, blind to the statuses that outrank it.
-     * Only applyToQuery() may call it.
+     * Only applyToQuery() and grantingAccess() may call it.
      *
      * @param  Builder<Workspace>  $query
      * @return Builder<Workspace>
@@ -195,6 +230,7 @@ enum BillingStatus: string implements HasColor, HasDescription, HasLabel
             self::PastDue => $query->whereHas('latestDefaultSubscription', self::pastDue(...)),
             self::Subscribed => $query->whereHas('latestDefaultSubscription', self::valid(...)),
             self::Enterprise => $query->where('plan', Plan::Enterprise),
+            self::Concierge => $query->where('plan', Plan::Concierge),
             self::Trialing => $query->onGenericTrial(),
             self::Grandfathered => $query->whereNotNull('hosted_free_grandfathered_at'),
             // Any row, not the latest: a later abandoned checkout must not hide one that ended.

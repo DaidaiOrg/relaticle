@@ -63,7 +63,7 @@ final readonly class SyncWorkspacePlanFromSubscription
 
     private function targetPlan(Workspace $workspace, Subscription $subscription, Plan $subscriptionPlan): ?Plan
     {
-        if ($workspace->plan === Plan::Enterprise && $subscriptionPlan !== Plan::Enterprise) {
+        if ($workspace->plan->isManaged() && $subscriptionPlan !== $workspace->plan) {
             return null;
         }
 

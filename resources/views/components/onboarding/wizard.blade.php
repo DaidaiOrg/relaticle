@@ -48,6 +48,7 @@
         }
     "
     x-on:go-to-wizard-step.window="$event.detail.key === @js($key) && goToStep($event.detail.step)"
+    x-init="$watch('step', () => $nextTick(() => $el.querySelector('.fi-sc-wizard-step.fi-active h1')?.focus({ preventScroll: true })))"
     {{-- Enter advances the step; on the last one it submits via requestSubmit
          so native validation still runs. Without this the wizard was mouse-only. --}}
     x-on:keydown.enter="
@@ -222,19 +223,6 @@
 
         <div x-show="isLastStep()" x-cloak>
             {{ $getSubmitAction() }}
-        </div>
-
-        {{-- Only the attribution step is optional: the first step and the last
-             (use case) are required. --}}
-        <div x-cloak class="mt-3 text-center">
-            <button
-                x-show="! isFirstStep() && ! isLastStep()"
-                type="button"
-                x-on:click="goToNextStep()"
-                class="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-            >
-                {{ __('filament/pages/workspaces.create_workspace.actions.skip') }}
-            </button>
         </div>
     </div>
 </div>

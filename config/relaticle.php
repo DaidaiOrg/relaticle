@@ -12,6 +12,10 @@ return [
         'starting_price_yearly' => 20_000,
     ],
 
+    'concierge' => [
+        'price_yearly' => 708,
+    ],
+
     'company' => [
         'name' => env('RELATICLE_COMPANY_NAME', 'Relaticle'),
         'address' => env('RELATICLE_COMPANY_ADDRESS', ''),

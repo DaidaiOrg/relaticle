@@ -5,16 +5,17 @@
         $monthlyUsed = min($used, $allowance);
         $remaining = (int) ($balance?->credits_remaining ?? 0);
         $isEnterprise = $workspace->plan === \App\Enums\Plan::Enterprise;
+        $isManaged = $workspace->plan->isManaged();
         $usedPercent = $allowance > 0 ? min(100, (int) round($used / $allowance * 100)) : 0;
 
         $isSubscribed = $subscription?->valid() ?? false;
         $canManageSubscription = $subscription && ($subscription->valid() || $pastDue);
-        $onTrial = ! $isEnterprise && $workspace->onGenericTrial();
+        $onTrial = ! $isManaged && $workspace->onGenericTrial();
         $onLegacyFree = $isGrandfathered
             && $workspace->plan === \App\Enums\Plan::Free
             && ! $onTrial
             && ! $isSubscribed;
-        $isManagedPlan = $isEnterprise || (! $subscription
+        $showsManagedCard = $isManaged || (! $subscription
             && ! $onTrial
             && ! $onLegacyFree
             && $workspace->plan !== \App\Enums\Plan::Free);
@@ -24,11 +25,12 @@
         $planLabel = match (true) {
             $onLegacyFree => __('billing.plans.legacy_free'),
             $workspace->plan === \App\Enums\Plan::Enterprise => __('billing.plans.enterprise'),
+            $workspace->plan === \App\Enums\Plan::Concierge => __('billing.plans.cloud_concierge'),
             default => __('billing.plans.cloud_pro'),
         };
 
         [$statusLabel, $statusClasses] = match (true) {
-            $isEnterprise => [__('billing.status.managed'), 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300'],
+            $isManaged => [__('billing.status.managed'), 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300'],
             $pastDue => [__('billing.status.past_due'), 'bg-danger-50 text-danger-700 dark:bg-danger-400/10 dark:text-danger-400'],
             $onGrace => [__('billing.status.canceling'), 'bg-warning-50 text-warning-700 dark:bg-warning-400/10 dark:text-warning-400'],
             $onTrial, $onStripeTrial => [__('billing.status.trialing'), 'bg-primary-50 text-primary-700 dark:bg-primary-400/10 dark:text-primary-400'],
@@ -79,7 +81,7 @@
                             </div>
 
                             <p class="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
-                                @if($isManagedPlan)
+                                @if($showsManagedCard)
                                     {{ __('billing.managed.tagline') }}
                                 @elseif($onTrial)
                                     {{ __('billing.trial.active_title') }} ({{ trans_choice('billing.trial.days_left', $trialDaysLeft, ['days' => $trialDaysLeft]) }})
@@ -154,7 +156,7 @@
                     <x-ri-error-warning-fill class="mt-0.5 h-5 w-5 shrink-0 text-danger-500 dark:text-danger-400" />
                     <div class="flex-1">
                         <h3 class="text-sm font-semibold text-danger-800 dark:text-danger-300">{{ __('billing.manage.past_due_title') }}</h3>
-                        <p class="mt-0.5 text-sm text-danger-700/80 dark:text-danger-400/70">{{ $isEnterprise ? __('billing.enterprise.previous_subscription_past_due') : __('billing.manage.past_due_body') }}</p>
+                        <p class="mt-0.5 text-sm text-danger-700/80 dark:text-danger-400/70">{{ $isManaged ? __('billing.managed.previous_subscription_past_due') : __('billing.manage.past_due_body') }}</p>
                         @if($canManageBilling)
                             <div class="mt-3">
                                 <x-filament::button color="danger" wire:click="managePortal">{{ __('billing.manage.button') }}</x-filament::button>
@@ -172,8 +174,8 @@
                     <div class="flex-1">
                         <h3 class="text-sm font-semibold text-warning-800 dark:text-warning-300">{{ __('billing.manage.cancel_scheduled_title') }}</h3>
                         <p class="mt-0.5 text-sm text-warning-700/80 dark:text-warning-400/70">
-                            {{ $isEnterprise
-                                ? __('billing.enterprise.previous_subscription_canceling', ['date' => $subscription?->ends_at?->toFormattedDateString()])
+                            {{ $isManaged
+                                ? __('billing.managed.previous_subscription_canceling', ['date' => $subscription?->ends_at?->toFormattedDateString()])
                                 : ($isGrandfathered
                                 ? __('billing.manage.cancel_scheduled_legacy_body', ['date' => $subscription?->ends_at?->toFormattedDateString()])
                                 : __('billing.manage.cancel_scheduled_body', ['date' => $subscription?->ends_at?->toFormattedDateString()])) }}
@@ -188,7 +190,7 @@
                 <x-ri-information-line class="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
                 <p class="text-sm text-gray-600 dark:text-gray-300">{{ __('billing.member.ask_owner', ['owner' => $workspace->owner->name]) }}</p>
             </div>
-        @elseif($isManagedPlan)
+        @elseif($showsManagedCard)
             <div class="{{ $card }} p-6">
                 <h3 class="font-display text-lg font-semibold text-gray-900 dark:text-white">{{ $isEnterprise ? __('billing.enterprise.title') : __('billing.managed.title') }}</h3>
                 <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ __('billing.enterprise.body') }}</p>

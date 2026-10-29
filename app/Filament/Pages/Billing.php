@@ -177,18 +177,19 @@ final class Billing extends Page
             'onStripeTrial' => $subscription?->onTrial() ?? false,
             'isGrandfathered' => $isGrandfathered,
             'balance' => AiCreditBalance::query()->where('workspace_id', $workspace->getKey())->first(),
-            'activating' => in_array($this->checkout, [self::CHECKOUT_SUCCESS, self::CHECKOUT_REOPENED], true) && ! $workspace->subscribed() && $workspace->plan !== Plan::Enterprise,
+            'activating' => in_array($this->checkout, [self::CHECKOUT_SUCCESS, self::CHECKOUT_REOPENED], true) && ! $workspace->subscribed() && ! $workspace->plan->isManaged(),
             'creditsFulfilling' => $this->credits === 'success',
             'availablePacks' => resolve(CreditPackCatalog::class)->purchasable(),
             ...($hasHostedAccess ? [] : $this->pausedViewData($workspace)),
         ];
     }
 
-    /** @return array{billingStatus: BillingStatus, otherWorkspaces: Collection<int, Workspace>} */
+    /** @return array{billingStatus: BillingStatus, mailboxSyncPaused: bool, otherWorkspaces: Collection<int, Workspace>} */
     private function pausedViewData(Workspace $workspace): array
     {
         return [
             'billingStatus' => $workspace->billingStatus(),
+            'mailboxSyncPaused' => $workspace->hasConnectedMailbox(),
             'otherWorkspaces' => $this->user()->allWorkspaces()
                 ->reject(fn (Workspace $other): bool => $other->is($workspace))
                 ->values(),

@@ -102,14 +102,14 @@ it('refuses a workspace that already subscribes', function (): void {
         ->assertNoRedirect();
 });
 
-it('refuses an enterprise workspace', function (): void {
+it('refuses a workspace on a managed plan', function (Plan $plan): void {
     StripeRecorder::install();
-    $this->workspace->forceFill(['plan' => Plan::Enterprise])->save();
+    $this->workspace->forceFill(['plan' => $plan])->save();
 
     livewire(UpgradeModal::class)
         ->call('checkout', 'yearly')
         ->assertNoRedirect();
-});
+})->with([Plan::Enterprise, Plan::Concierge]);
 
 it('refuses when billing is switched off', function (): void {
     StripeRecorder::install();

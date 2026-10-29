@@ -7,6 +7,7 @@ use App\Http\Controllers\PrivacyPolicyController;
 use App\Http\Controllers\TermsOfServiceController;
 use App\Models\User;
 use App\Support\DetectsPublicMarkdownRequest;
+use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
@@ -70,6 +71,19 @@ describe('Home page', function () {
         expect($organization['logo'])->toEndWith('/web-app-manifest-512x512.png')
             ->and(file_exists(public_path('web-app-manifest-512x512.png')))->toBeTrue();
     });
+
+    it('declares the social card size the image file actually has on :path', function (string $path) {
+        $html = (string) $this->get($path)->assertStatus(200)->getContent();
+
+        preg_match('#<meta property="og:image" content="[^"]+/images/([^"?]+)\?v=\d+"/>#', $html, $image);
+        preg_match('#<meta property="og:image:width" content="(\d+)"/>#', $html, $width);
+        preg_match('#<meta property="og:image:height" content="(\d+)"/>#', $html, $height);
+
+        [$fileWidth, $fileHeight] = getimagesize(public_path("images/{$image[1]}"));
+
+        expect((int) $width[1])->toBe($fileWidth)
+            ->and((int) $height[1])->toBe($fileHeight);
+    })->with(['/', '/ai', '/self-hosted']);
 });
 
 describe('Legal pages', function () {
@@ -100,7 +114,7 @@ describe('Legal pages', function () {
         $response->assertSee('Privacy Policy');
         $response->assertSee('Relaticle');
         $response->assertSee('privacy@relaticle.com');
-        $response->assertSee('October 5, 2026');
+        $response->assertSee('October 6, 2026');
         $response->assertSee('Data from a self-hosted installation stays on your servers unless you configure an external integration.');
         $response->assertSee('That integration may send authorized data to its provider.');
         $response->assertSee('Relaticle does not sell CRM data.');
@@ -151,6 +165,11 @@ describe('Legal pages', function () {
         $response->assertSee('The thread content goes to our AI provider to produce that summary.');
         $response->assertSee('Emails and meetings already synced stay in the workspace.');
         $response->assertSee('We never change, label, or delete messages in your mailbox.');
+        $response->assertSee('small files that arrive inside it are stored with that message.');
+        $response->assertSee('The summary is saved with the thread in your workspace.');
+        $response->assertSee('the AI provider that writes a summary does not train its models on the thread.');
+        $response->assertSee("We don't build aggregated or anonymized data sets from it.", false);
+        $response->assertSee('This covers the data as received and anything derived from it, such as a thread summary.');
     })->with([
         'HTML' => [[]],
         'Markdown' => [['Accept' => 'text/markdown']],
@@ -243,7 +262,7 @@ describe('Authentication redirects', function () {
     it('redirects forgot password to app panel', function () {
         $response = $this->get('/forgot-password');
 
-        $response->assertRedirect(url()->getAppUrl('forgot-password'));
+        $response->assertRedirect(Filament::getPanel('app')->getRequestPasswordResetUrl());
     });
 
     it('redirects dashboard to app panel', function () {
@@ -273,7 +292,7 @@ describe('Social authentication routes', function () {
         // The 11th request should be throttled
         $response = $this->get('/auth/redirect/github');
 
-        $response->assertStatus(429); // Too Many Requests
+        $response->assertRedirect(route('login'));
     });
 
     it('rejects github as a provider for redirect', function () {

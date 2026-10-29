@@ -70,6 +70,19 @@ test('accepting an invitation lands the user in the app panel with a visible con
         ->assertSee(__('workspaces.accept.joined', ['workspace' => $this->workspace->name]));
 });
 
+test('the accept page names the account that will join', function () {
+    $invitation = WorkspaceInvitation::factory()->create([
+        'workspace_id' => $this->workspace->id,
+        'email' => $this->user->email,
+        'role' => 'member',
+    ]);
+
+    $this->actingAs($this->user)
+        ->get(route('workspace-invitations.token.accept', ['token' => rawTokenFor($invitation)]))
+        ->assertOk()
+        ->assertSeeInOrder([__('workspaces.invite_link.join.joining_as'), $this->user->email]);
+});
+
 test('expired invitation shows the expired state', function () {
     $invitation = WorkspaceInvitation::factory()->create([
         'workspace_id' => $this->workspace->id,
@@ -192,7 +205,7 @@ test('accepting invitation deletes the invitation record', function () {
     expect(WorkspaceInvitation::count())->toBe(0);
 });
 
-test('user with scheduled deletion cannot accept invitation', function () {
+test('a user scheduled for deletion is sent to the deletion interstitial instead of the invitation', function () {
     $user = User::factory()->withPersonalWorkspace()->scheduledForDeletion()->create();
 
     $workspace = Workspace::factory()->create();
@@ -203,11 +216,15 @@ test('user with scheduled deletion cannot accept invitation', function () {
         'expires_at' => now()->addDays(7),
     ]);
 
-    $joinUrl = route('workspace-invitations.token.join', ['token' => rawTokenFor($invitation)]);
+    $raw = rawTokenFor($invitation);
 
     $this->actingAs($user)
-        ->post($joinUrl)
-        ->assertForbidden();
+        ->get(route('workspace-invitations.token.accept', ['token' => $raw]))
+        ->assertRedirect(route('filament.app.scheduled-deletion'));
+
+    $this->actingAs($user)
+        ->post(route('workspace-invitations.token.join', ['token' => $raw]))
+        ->assertRedirect(route('filament.app.scheduled-deletion'));
 
     expect($workspace->fresh()->hasUser($user))->toBeFalse();
 });
@@ -227,10 +244,30 @@ test('a workspace scheduled for deletion cannot be joined', function (): void {
 
     $this->actingAs($this->user)
         ->post($joinUrl)
-        ->assertStatus(410);
+        ->assertStatus(410)
+        ->assertSee(__('workspaces.accept.deleting.heading', ['workspace' => $workspace->name]));
 
     expect($workspace->fresh()->hasUser($this->user))->toBeFalse();
     expect(WorkspaceInvitation::query()->whereKey($invitation->id)->exists())->toBeTrue();
+});
+
+test('an invitation to a workspace scheduled for deletion says so instead of offering to join', function (): void {
+    $workspace = Workspace::factory()->create();
+    $workspace->forceFill(['scheduled_deletion_at' => now()->addDays(30)])->save();
+
+    /** @var WorkspaceInvitation $invitation */
+    $invitation = $workspace->workspaceInvitations()->create([
+        'email' => $this->user->email,
+        'role' => 'member',
+        'expires_at' => now()->addDays(7),
+    ]);
+
+    $this->actingAs($this->user)
+        ->get(route('workspace-invitations.token.accept', ['token' => rawTokenFor($invitation)]))
+        ->assertStatus(410)
+        ->assertSee(__('workspaces.accept.deleting.heading', ['workspace' => $workspace->name]))
+        ->assertSee(__('workspaces.accept.deleting.body'))
+        ->assertDontSee(__('workspaces.accept.ready.action', ['workspace' => $workspace->name]));
 });
 
 test('a GET on the accept link never joins the workspace', function (): void {

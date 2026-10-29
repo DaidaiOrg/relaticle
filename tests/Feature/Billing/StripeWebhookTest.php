@@ -7,36 +7,60 @@ use App\Actions\Billing\NotifyWorkspaceOfPaymentFailure;
 use App\Actions\Billing\StartProTrial;
 use App\Actions\Billing\SyncWorkspacePlanFromSubscription;
 use App\Enums\BillingStatus;
+use App\Enums\Notifications\NotificationReason;
 use App\Enums\Plan;
+use App\Filament\Pages\Billing;
 use App\Http\Controllers\Billing\StripeWebhookController;
 use App\Listeners\Billing\SyncPlanOnStripeSubscriptionChange;
+use App\Livewire\App\AppDatabaseNotifications;
 use App\Mail\ProEndedMail;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Notifications\PaymentFailedNotification;
+use App\Support\CurrentWorkspace;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laravel\Cashier\Subscription;
+use Livewire\Livewire;
 use Relaticle\Chat\Models\AiCreditBalance;
 use Relaticle\Chat\Models\AiCreditTransaction;
 use Relaticle\Chat\Services\CreditService;
 use Relaticle\SystemAdmin\Actions\TransferWorkspaceBilling;
 use Relaticle\SystemAdmin\Models\SystemAdministrator;
+use Stripe\Exception\AuthenticationException;
+use Tests\Helpers\StripeRecorder;
 
 mutates(SyncWorkspacePlanFromSubscription::class);
 mutates(SyncPlanOnStripeSubscriptionChange::class);
 mutates(GrantPurchasedCredits::class);
 mutates(NotifyWorkspaceOfPaymentFailure::class);
+mutates(PaymentFailedNotification::class);
 
 beforeEach(function (): void {
     config()->set('cashier.webhook.secret', 'whsec_test_secret');
+    config()->set('cashier.secret', 'sk_test_fake');
     config()->set('services.stripe.prices.pro_monthly', 'price_pro_monthly_test');
     config()->set('services.stripe.prices.pro_yearly', 'price_pro_yearly_test');
 });
 
-function sendStripeWebhook(array $payload, string $secret = 'whsec_test_secret'): TestResponse
+afterEach(function (): void {
+    StripeRecorder::uninstall();
+});
+
+/**
+ * @param  array<string, mixed>  $payload
+ * @param  array<string, mixed>|null  $stripeHolds
+ */
+function sendStripeWebhook(array $payload, string $secret = 'whsec_test_secret', ?array $stripeHolds = null): TestResponse
 {
+    if (($payload['type'] ?? null) === 'customer.subscription.updated') {
+        $subscription = $stripeHolds ?? $payload['data']['object'];
+
+        StripeRecorder::install()->respondTo("/v1/subscriptions/{$subscription['id']}", $subscription);
+    }
+
     $body = json_encode($payload, JSON_THROW_ON_ERROR);
     $timestamp = time();
     $signature = hash_hmac('sha256', "{$timestamp}.{$body}", $secret);
@@ -236,6 +260,50 @@ it('preserves an Enterprise grant when an older Pro subscription sends an update
 
     expect(AiCreditBalance::query()->where('workspace_id', $workspace->getKey())->sole()->credits_remaining)->toBe(10_000);
 })->with(['active', 'past_due']);
+
+it('maps a late subscription update to the price Stripe holds now', function (): void {
+    $workspace = stripeBillingWorkspace();
+
+    sendStripeWebhook(stripeSubscriptionEvent($workspace, 'created', ['price' => 'price_pro_yearly_test']))->assertSuccessful();
+    sendStripeWebhook(
+        stripeSubscriptionEvent($workspace, 'updated', ['price' => 'price_pro_monthly_test']),
+        stripeHolds: stripeSubscriptionEvent($workspace, 'updated', ['price' => 'price_pro_yearly_test'])['data']['object'],
+    )->assertSuccessful();
+
+    expect(Subscription::query()->where('stripe_id', 'sub_test_1')->value('stripe_price'))->toBe('price_pro_yearly_test')
+        ->and($workspace->refresh()->plan)->toBe(Plan::Pro);
+});
+
+it('fails the webhook so Stripe retries when the latest subscription cannot be fetched', function (): void {
+    $workspace = stripeBillingWorkspace();
+
+    sendStripeWebhook(stripeSubscriptionEvent($workspace, 'created'))->assertSuccessful();
+
+    config()->set('cashier.secret', null);
+    $payload = stripeSubscriptionEvent($workspace, 'updated', ['price' => 'price_pro_yearly_test']);
+    $body = json_encode($payload, JSON_THROW_ON_ERROR);
+    $timestamp = time();
+
+    $this->withoutExceptionHandling();
+
+    expect(fn () => $this->call('POST', '/stripe/webhook', [], [], [], [
+        'HTTP_STRIPE_SIGNATURE' => "t={$timestamp},v1=".hash_hmac('sha256', "{$timestamp}.{$body}", 'whsec_test_secret'),
+        'CONTENT_TYPE' => 'application/json',
+    ], $body))->toThrow(AuthenticationException::class);
+
+    expect(Subscription::query()->where('stripe_id', 'sub_test_1')->value('stripe_price'))->toBe('price_pro_monthly_test');
+});
+
+it('preserves a Concierge grant when an older Pro subscription sends an update', function (): void {
+    $workspace = stripeBillingWorkspace();
+
+    sendStripeWebhook(stripeSubscriptionEvent($workspace, 'created'))->assertSuccessful();
+    $workspace->forceFill(['plan' => Plan::Concierge])->save();
+
+    sendStripeWebhook(stripeSubscriptionEvent($workspace, 'updated', ['cancel_at_period_end' => true]))->assertSuccessful();
+
+    expect($workspace->refresh()->plan)->toBe(Plan::Concierge);
+});
 
 it('leaves the plan untouched for a price that maps to no plan', function (): void {
     $workspace = stripeBillingWorkspace();
@@ -484,28 +552,48 @@ it('notifies the workspace owner when a renewal charge fails', function (): void
 
     sendStripeWebhook(invoicePaymentFailedEvent($workspace))->assertOk();
 
-    $notification = $workspace->owner->notifications()->sole();
+    $notification = PaymentFailedNotification::present($workspace->owner->notifications()->sole());
 
-    expect($notification->data['title'])->toContain($workspace->name)
-        ->and($notification->data['body'])->toBe(__('billing.payment_failed.notification_body'));
+    expect($notification->getTitle())->toContain($workspace->name)
+        ->and($notification->getBody())->toBe(__('billing.payment_failed.notification_body'))
+        ->and($notification->getActions()[0]->getUrl())->toBe(Billing::getUrl(panel: 'app', tenant: $workspace));
 });
 
-it('keeps Enterprise access clear in an older subscription payment notification', function (): void {
+it('keeps a managed plan clear in an older subscription payment notification', function (Plan $plan): void {
+    $workspace = stripeBillingWorkspace();
+    $workspace->forceFill(['plan' => $plan])->save();
+
+    sendStripeWebhook(invoicePaymentFailedEvent($workspace))->assertOk();
+
+    $notification = PaymentFailedNotification::present($workspace->owner->notifications()->sole());
+
+    expect($notification->getBody())->toContain('Your current plan is unchanged.')
+        ->not->toContain('to keep Pro');
+})->with([Plan::Enterprise, Plan::Concierge]);
+
+it('still reads an Enterprise payment notification stored under the earlier key', function (): void {
     $workspace = stripeBillingWorkspace();
     $workspace->forceFill(['plan' => Plan::Enterprise])->save();
 
     sendStripeWebhook(invoicePaymentFailedEvent($workspace))->assertOk();
 
-    $notification = $workspace->owner->notifications()->sole();
+    $row = $workspace->owner->notifications()->sole();
+    $row->forceFill(['data' => collect($row->data)->except('managed')->put('enterprise', true)->all()])->save();
 
-    expect($notification->data['body'])->toContain('Your Enterprise access is unchanged.')
-        ->not->toContain('to keep Pro');
+    expect(PaymentFailedNotification::present($row->fresh())->getBody())->toContain('Your current plan is unchanged.');
 });
 
 it('notifies once per invoice, not once per Stripe retry attempt', function (): void {
     $workspace = stripeBillingWorkspace();
 
-    foreach ([1, 2, 3] as $attempt) {
+    sendStripeWebhook(invoicePaymentFailedEvent($workspace, [
+        'id' => 'in_test_retried',
+        'attempt_count' => 1,
+    ]))->assertOk();
+
+    $workspace->owner->notifications()->sole()->markAsRead();
+
+    foreach ([2, 3] as $attempt) {
         sendStripeWebhook(invoicePaymentFailedEvent($workspace, [
             'id' => 'in_test_retried',
             'attempt_count' => $attempt,
@@ -513,6 +601,54 @@ it('notifies once per invoice, not once per Stripe retry attempt', function (): 
     }
 
     expect($workspace->owner->notifications()->count())->toBe(1);
+});
+
+it('stores one account-level payment failure row for the owner', function (): void {
+    $workspace = stripeBillingWorkspace();
+
+    sendStripeWebhook(invoicePaymentFailedEvent($workspace))->assertOk();
+    sendStripeWebhook(invoicePaymentFailedEvent($workspace))->assertOk();
+
+    $owner = $workspace->owner;
+    $row = $owner->notifications()->first();
+
+    expect($owner->notifications()->count())->toBe(1)
+        ->and($row->workspace_id)->toBeNull()
+        ->and($row->data['workspace_id'])->toBe($workspace->getKey())
+        ->and($row->reason)->toBe(NotificationReason::System);
+});
+
+it('shows a payment failure in the bell of every workspace its owner opens', function (): void {
+    $owner = User::factory()->withPersonalWorkspace()->create();
+    $current = $owner->currentWorkspace;
+    $failing = Workspace::factory()->create([
+        'user_id' => $owner->getKey(),
+        'personal_workspace' => false,
+        'name' => 'Failing Workspace',
+        'stripe_id' => 'cus_'.Str::ulid(),
+    ]);
+    resolve(CurrentWorkspace::class)->set($current);
+
+    sendStripeWebhook(invoicePaymentFailedEvent($failing))->assertOk();
+
+    Livewire::actingAs($owner)->test(AppDatabaseNotifications::class)
+        ->assertSee(__('billing.payment_failed.notification_title', ['workspace' => 'Failing Workspace']))
+        ->assertSee(Billing::getUrl(panel: 'app', tenant: $failing), false)
+        ->assertDontSee(Billing::getUrl(panel: 'app', tenant: $current), false);
+});
+
+it('offers no billing link once the failing workspace is gone', function (): void {
+    $owner = User::factory()->withPersonalWorkspace()->create();
+    $failing = Workspace::factory()->create([
+        'user_id' => $owner->getKey(),
+        'personal_workspace' => false,
+        'stripe_id' => 'cus_'.Str::ulid(),
+    ]);
+
+    sendStripeWebhook(invoicePaymentFailedEvent($failing))->assertOk();
+    $failing->delete();
+
+    expect(PaymentFailedNotification::present($owner->notifications()->sole())->getActions())->toBe([]);
 });
 
 it('alarms on a plan change that failed to bill', function (): void {

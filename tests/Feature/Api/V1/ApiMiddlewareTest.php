@@ -6,6 +6,7 @@ use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\SetApiWorkspaceContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Support\Http\RequestAbility;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -16,6 +17,7 @@ use Relaticle\SystemAdmin\Models\SystemAdministrator;
 
 mutates(
     ForceJsonResponse::class,
+    RequestAbility::class,
     SetApiWorkspaceContext::class,
 );
 
@@ -140,6 +142,17 @@ describe('configurable rate limits', function (): void {
 });
 
 describe('rate limit headers', function (): void {
+    it('counts a filter query in the read bucket and a write in the write bucket', function (): void {
+        $token = $this->user->createToken('test', ['*'])->plainTextToken;
+        $limit = fn (string $method, string $uri, array $body = []): int => (int) $this->withToken($token)
+            ->json($method, $uri, $body)
+            ->headers->get('X-RateLimit-Limit');
+
+        expect($limit('GET', '/api/v1/companies'))->toBe(300)
+            ->and($limit('POST', '/api/v1/companies/query'))->toBe(300)
+            ->and($limit('POST', '/api/v1/companies', ['name' => 'Acme']))->toBe(60);
+    });
+
     it('reports the limit and remaining budget on every authenticated response', function (): void {
         $token = $this->user->createToken('test', ['*'])->plainTextToken;
 
